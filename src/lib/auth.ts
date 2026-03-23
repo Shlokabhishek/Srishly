@@ -1,10 +1,13 @@
 import type { AuthRegisterInput, ParsedIdCard } from '@/types';
 import { sanitizeText } from '@/lib/utils';
 
-const SHARDA_DOMAIN = '@sharda.ac.in';
+const SHARDA_DOMAIN = 'sharda.ac.in';
 
 export function isShardaEmail(email: string) {
-  return email.trim().toLowerCase().endsWith(SHARDA_DOMAIN);
+  const normalizedEmail = email.trim().toLowerCase();
+  const [, domain = ''] = normalizedEmail.split('@');
+
+  return domain === SHARDA_DOMAIN || domain.endsWith(`.${SHARDA_DOMAIN}`);
 }
 
 export function normalizeEmail(email: string) {
@@ -27,7 +30,7 @@ export function validateRegistrationInput(input: AuthRegisterInput) {
   const errors: Partial<Record<keyof AuthRegisterInput, string>> = {};
 
   if (!isShardaEmail(input.email)) {
-    errors.email = 'Use your official @sharda.ac.in email address.';
+    errors.email = 'Use your official Sharda University email address.';
   }
 
   if (input.password.length < 8) {
@@ -57,7 +60,7 @@ export function parseIdCardText(rawText: string): ParsedIdCard {
   const normalizedText = rawText.replace(/\r/g, '').replace(/[^\S\n]+/g, ' ');
   const upperText = normalizedText.toUpperCase();
 
-  const emailMatch = upperText.match(/[A-Z0-9._%+-]+@SHARDA\.AC\.IN/);
+  const emailMatch = upperText.match(/[A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)*SHARDA\.AC\.IN/);
   const idMatch =
     upperText.match(/\b(?:STUDENT\s*ID|ENROLLMENT|ENROLMENT|ID\s*NO|ID)\s*[:\-]?\s*([A-Z0-9-]{5,})\b/) ||
     upperText.match(/\b[0-9]{6,}\b/);

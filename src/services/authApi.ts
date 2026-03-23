@@ -34,7 +34,7 @@ export function mapSupabaseSession(session: Session): AuthSession {
 
 function ensureShardaEmail(email: string) {
   if (!isShardaEmail(email)) {
-    throw new AuthApiError('Use your official @sharda.ac.in email address.');
+    throw new AuthApiError('Use your official Sharda University email address.');
   }
 }
 

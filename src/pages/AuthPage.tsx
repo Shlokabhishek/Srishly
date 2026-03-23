@@ -32,10 +32,11 @@ export default function AuthPage() {
   const [ocrLoading, setOcrLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [emailTouched, setEmailTouched] = React.useState(false);
 
   useDocumentMeta(
     'Sharda authentication',
-    'Sign in with your @sharda.ac.in account, upload your student ID card, and autofill profile details securely.',
+    'Sign in with your official Sharda University email, upload your student ID card, and autofill profile details securely.',
   );
 
   React.useEffect(() => {
@@ -43,6 +44,16 @@ export default function AuthPage() {
       navigate(redirectTo, { replace: true });
     }
   }, [navigate, redirectTo, session]);
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const emailLooksValid = isShardaEmail(normalizedEmail);
+  const shouldShowEmailError = emailTouched && normalizedEmail.length > 0 && !emailLooksValid;
+  const shouldShowManualEmailHint = mode === 'register' && Boolean(ocrResult && !ocrResult.extractedEmail) && normalizedEmail.length === 0;
+  const isRegisterDisabled =
+    submitting ||
+    ocrLoading ||
+    mode === 'register' &&
+      (!emailLooksValid || !password || !phone || !name || !studentIdNumber || !idCardImageName);
 
   async function handleIdCardUpload(file: File | null) {
     if (!file) {
@@ -74,6 +85,7 @@ export default function AuthPage() {
 
       if (parsed.extractedEmail && !email) {
         setEmail(parsed.extractedEmail);
+        setEmailTouched(true);
       }
 
       if (parsed.confidence < 40) {
@@ -143,8 +155,9 @@ export default function AuthPage() {
           <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Student authentication</p>
           <h1 className="text-4xl font-semibold text-white">Sharda-only access with ID-card assisted onboarding.</h1>
           <p className="text-sm leading-7 text-slate-300">
-            Register using your official <code>@sharda.ac.in</code> email, upload your university ID card, let OCR prefill
-            your name and student ID, then confirm your phone number.
+            Register using your official Sharda University email such as <code>name@sharda.ac.in</code> or{' '}
+            <code>name@ug.sharda.ac.in</code>, upload your university ID card, let OCR prefill your name and student ID,
+            then confirm your phone number.
           </p>
           <ul className="space-y-3 text-sm leading-7 text-slate-300">
             <li>Email domain is restricted to Sharda accounts.</li>
@@ -195,8 +208,10 @@ export default function AuthPage() {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  placeholder="your.name@sharda.ac.in"
+                  onBlur={() => setEmailTouched(true)}
+                  placeholder="your.name@ug.sharda.ac.in"
                   className="w-full bg-transparent text-white outline-none"
+                  autoComplete={mode === 'login' ? 'username' : 'email'}
                 />
               </div>
             </FormField>
@@ -211,6 +226,7 @@ export default function AuthPage() {
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder="At least 8 characters"
                   className="w-full bg-transparent text-white outline-none"
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 />
               </div>
             </FormField>
@@ -281,11 +297,15 @@ export default function AuthPage() {
               </>
             ) : null}
 
-            {!isShardaEmail(email) && email ? (
-              <p className="text-sm text-red-300">Only Sharda University email addresses are allowed.</p>
+            {shouldShowManualEmailHint ? (
+              <p className="text-sm text-amber-200">OCR could not detect your Sharda email. Enter it manually to continue.</p>
             ) : null}
 
-            <Button className="w-full" size="lg" type="submit" disabled={submitting || ocrLoading}>
+            {shouldShowEmailError ? (
+              <p className="text-sm text-red-300">Use a Sharda University email such as `@sharda.ac.in` or `@ug.sharda.ac.in`.</p>
+            ) : null}
+
+            <Button className="w-full" size="lg" type="submit" disabled={isRegisterDisabled}>
               {submitting ? 'Processing...' : mode === 'register' ? 'Create account' : 'Login'}
             </Button>
           </form>
