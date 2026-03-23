@@ -12,6 +12,7 @@ import PageLoader from '@/components/ui/PageLoader';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { ROUTES } from '@/constants';
 import { useMode } from '@/context/ModeContext';
+import { useAuth } from '@/context/AuthContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { completeParcelDelivery, getDashboardSnapshot } from '@/services/mockApi';
@@ -31,6 +32,7 @@ function getParcelTone(status: Parcel['status']) {
 
 export default function Dashboard() {
   const { mode, setMode } = useMode();
+  const { session } = useAuth();
   const [searchParams] = useSearchParams();
   const [parcels, setParcels] = React.useState<Parcel[]>([]);
   const [trips, setTrips] = React.useState<Trip[]>([]);
@@ -115,6 +117,11 @@ export default function Dashboard() {
               Sender and traveler views now share a more resilient dashboard with persisted mock data and validation-backed
               completion actions.
             </p>
+            {session ? (
+              <p className="text-sm text-slate-400">
+                Signed in as {session.user.name} with {session.user.email}. Phone: {session.user.phone}
+              </p>
+            ) : null}
           </div>
 
           <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">

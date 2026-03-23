@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { Menu, ShieldCheck, UserRound, X } from 'lucide-react';
+import { LogOut, Menu, ShieldCheck, UserRound, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { APP_NAME, ROUTES } from '@/constants';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const location = useLocation();
+  const { session, logout } = useAuth();
 
   React.useEffect(() => {
     setMenuOpen(false);
@@ -53,13 +55,36 @@ export default function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link
-            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-            to={ROUTES.dashboard}
-          >
-            <UserRound className="h-4 w-4 text-amber-300" />
-            Dashboard
-          </Link>
+          {session ? (
+            <>
+              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white">
+                {session.user.name}
+              </span>
+              <Link
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                to={ROUTES.dashboard}
+              >
+                <UserRound className="h-4 w-4 text-amber-300" />
+                Dashboard
+              </Link>
+              <button
+                type="button"
+                onClick={() => void logout()}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4 text-amber-300" />
+                Logout
+              </button>
+            </>
+          ) : (
+            <Link
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+              to={ROUTES.auth}
+            >
+              <UserRound className="h-4 w-4 text-amber-300" />
+              Sign in
+            </Link>
+          )}
         </div>
 
         <button
@@ -92,12 +117,30 @@ export default function Header() {
                 </Link>
               );
             })}
-            <Link
-              className="mt-2 inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
-              to={ROUTES.dashboard}
-            >
-              Open dashboard
-            </Link>
+            {session ? (
+              <>
+                <Link
+                  className="mt-2 inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
+                  to={ROUTES.dashboard}
+                >
+                  Open dashboard
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => void logout()}
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                >
+                  Logout
+                </button>
+              </>
+            ) : (
+              <Link
+                className="mt-2 inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
+                to={ROUTES.auth}
+              >
+                Sign in
+              </Link>
+            )}
           </nav>
         </div>
       ) : null}

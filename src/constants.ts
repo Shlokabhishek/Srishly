@@ -5,6 +5,7 @@ export const SUPPORT_EMAIL = 'team.srishly@gmail.com';
 
 export const ROUTES = {
   home: '/',
+  auth: '/auth',
   sendParcel: '/send',
   findTrip: '/find',
   findTraveler: '/find-traveler',

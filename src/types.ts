@@ -4,6 +4,7 @@ export type ParcelSize = 'Small' | 'Medium' | 'Large';
 export type ParcelStatus = 'posted' | 'matched' | 'in_transit' | 'delivered';
 export type TripMode = 'flight' | 'train' | 'bus' | 'car';
 export type ReviewAction = 'approved' | 'rejected';
+export type UserRole = 'sender' | 'traveler';
 
 export interface ParcelDraftInput {
   parcelCategory: string;
@@ -63,6 +64,45 @@ export interface VerificationCase {
   submittedAt: string;
   city: string;
   status: 'pending' | ReviewAction;
+}
+
+export interface AuthRegisterInput {
+  email: string;
+  password: string;
+  phone: string;
+  name: string;
+  studentIdNumber: string;
+  idCardImageName: string;
+}
+
+export interface AuthLoginInput {
+  email: string;
+  password: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  phone: string;
+  studentIdNumber: string;
+  emailVerified: boolean;
+  idVerified: boolean;
+  idCardImageName: string;
+  rolePreference: UserRole;
+  createdAt: string;
+}
+
+export interface AuthSession {
+  user: AuthUser;
+}
+
+export interface ParsedIdCard {
+  extractedName: string;
+  extractedStudentId: string;
+  extractedEmail?: string;
+  confidence: number;
+  rawText: string;
 }
 
 export interface StatItem {

@@ -5,12 +5,13 @@ import { ApiError } from './http';
 import { seedParcels, seedTrips, seedVerificationCases } from '../../src/data/mockData';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '../../src/lib/validation';
 import { createId } from '../../src/lib/utils';
-import type { Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '../../src/types';
+import type { AuthUser, Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '../../src/types';
 
 const COLLECTIONS = {
   parcels: 'parcels',
   trips: 'trips',
   verificationCases: 'verificationCases',
+  users: 'users',
 } as const;
 
 async function seedCollectionIfEmpty<T extends { id: string }>(collection: Collection<T>, seedData: T[]) {
@@ -39,6 +40,15 @@ export async function getVerificationCasesCollection() {
   const collection = db.collection<VerificationCase>(COLLECTIONS.verificationCases);
   await seedCollectionIfEmpty(collection, seedVerificationCases);
   return collection;
+}
+
+export interface StoredUser extends AuthUser {
+  passwordHash: string;
+}
+
+export async function getUsersCollection() {
+  const db = await getDb();
+  return db.collection<StoredUser>(COLLECTIONS.users);
 }
 
 export async function listParcels() {

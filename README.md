@@ -1,6 +1,13 @@
 # Srishly Logistics Network
 
-Srishly is a Vite + React application for peer-to-peer parcel logistics. The app now supports Vercel deployment with MongoDB Atlas-backed serverless APIs for parcels, trips, dashboard state, and verification queues.
+Srishly is a Vite + React application for peer-to-peer parcel logistics. The app supports Vercel deployment with MongoDB Atlas-backed serverless APIs for parcels, trips, dashboard state, and verification queues, plus Supabase-powered authentication for Sharda University users.
+
+## Authentication Flow
+
+- only `@sharda.ac.in` email addresses can register
+- student ID card OCR extracts name and student ID
+- registration asks for phone number after ID-assisted autofill
+- Supabase Auth manages email/password sign-up, sign-in, and persistent sessions
 
 ## Stack
 
@@ -11,6 +18,7 @@ Srishly is a Vite + React application for peer-to-peer parcel logistics. The app
 - Motion for UI transitions
 - Vercel serverless functions in `api/`
 - MongoDB Atlas for persistent storage
+- Supabase Auth for authentication
 - Vitest + Testing Library for tests
 
 ## Project Structure
@@ -18,6 +26,8 @@ Srishly is a Vite + React application for peer-to-peer parcel logistics. The app
 - `src/`: frontend application
 - `api/`: Vercel serverless API routes and MongoDB access
 - `src/services/mockApi.ts`: client data layer that uses `/api/*` in production and falls back only during local frontend-only development
+- `src/pages/AuthPage.tsx`: Sharda email + ID-card onboarding flow
+- `src/lib/supabase.ts`: shared Supabase client
 - `vercel.json`: Vercel SPA rewrite and output configuration
 
 ## Environment Variables
@@ -28,6 +38,8 @@ Create a local `.env` or configure these in Vercel:
 VITE_APP_NAME=Srishly
 VITE_SUPPORT_EMAIL=team.srishly@gmail.com
 VITE_API_BASE_URL=
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_ANON_KEY=your-public-anon-key
 MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/<db>?retryWrites=true&w=majority
 MONGODB_DB_NAME=srishly
 ```
@@ -36,6 +48,16 @@ Notes:
 
 - Leave `VITE_API_BASE_URL` empty on Vercel so the frontend uses same-origin `/api`.
 - Never expose `MONGODB_URI` to the client. It is only used by the serverless functions.
+- `VITE_SUPABASE_ANON_KEY` is safe for the client. Do not put your Supabase service-role key in the frontend.
+- Enable email/password auth in Supabase. If email confirmation is enabled, new users must confirm their inbox before signing in.
+
+## Supabase Setup
+
+1. Create a Supabase project.
+2. Enable Email auth in `Authentication -> Providers`.
+3. Add your Vercel production URL and local dev URL to the allowed redirect URLs if needed.
+4. Copy the project URL into `VITE_SUPABASE_URL`.
+5. Copy the public anon key into `VITE_SUPABASE_ANON_KEY`.
 
 ## MongoDB Atlas Setup
 
@@ -64,7 +86,7 @@ This mode can fall back to mock/local browser storage if the API is unavailable.
 
 ### Full Vercel + Atlas stack
 
-Use Vercel’s local runtime so the `api/` folder runs correctly:
+Use Vercel's local runtime so the `api/` folder runs correctly:
 
 ```bash
 npm install
@@ -114,6 +136,8 @@ npm run test:run
 ## Security Notes
 
 - MongoDB secrets stay server-side in Vercel env vars.
+- Supabase manages session issuance and refresh on the client.
 - Request validation runs before parcel creation and delivery completion.
+- Registration is limited to official Sharda University email addresses.
 - Frontend rendering remains safe with React escaping.
 - Atlas access is centralized through reusable serverless data helpers in `api/_lib/`.
