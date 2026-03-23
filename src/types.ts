@@ -97,6 +97,12 @@ export interface AuthSession {
   user: AuthUser;
 }
 
+export interface AuthRegisterResult {
+  session: AuthSession | null;
+  requiresEmailVerification: boolean;
+  email: string;
+}
+
 export interface ParsedIdCard {
   extractedName: string;
   extractedStudentId: string;

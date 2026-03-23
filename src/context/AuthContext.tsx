@@ -2,12 +2,12 @@ import * as React from 'react';
 
 import { supabase } from '@/lib/supabase';
 import { getCurrentSession, loginUser, logoutUser, mapSupabaseSession, registerUser } from '@/services/authApi';
-import type { AuthLoginInput, AuthRegisterInput, AuthSession } from '@/types';
+import type { AuthLoginInput, AuthRegisterInput, AuthRegisterResult, AuthSession } from '@/types';
 
 interface AuthContextValue {
   session: AuthSession | null;
   loading: boolean;
-  register: (input: AuthRegisterInput) => Promise<AuthSession>;
+  register: (input: AuthRegisterInput) => Promise<AuthRegisterResult>;
   login: (input: AuthLoginInput) => Promise<AuthSession>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -46,9 +46,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshSession]);
 
   const register = React.useCallback(async (input: AuthRegisterInput) => {
-    const nextSession = await registerUser(input);
-    setSession(nextSession);
-    return nextSession;
+    const result = await registerUser(input);
+    setSession(result.session);
+    return result;
   }, []);
 
   const login = React.useCallback(async (input: AuthLoginInput) => {

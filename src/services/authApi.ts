@@ -2,7 +2,7 @@ import type { Session, User } from '@supabase/supabase-js';
 
 import { isShardaEmail, normalizeEmail } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
-import type { AuthLoginInput, AuthRegisterInput, AuthSession } from '@/types';
+import type { AuthLoginInput, AuthRegisterInput, AuthRegisterResult, AuthSession } from '@/types';
 
 export class AuthApiError extends Error {
   constructor(message: string) {
@@ -61,7 +61,7 @@ function ensureShardaEmail(email: string) {
   }
 }
 
-export async function registerUser(input: AuthRegisterInput) {
+export async function registerUser(input: AuthRegisterInput): Promise<AuthRegisterResult> {
   const email = normalizeEmail(input.email);
   ensureShardaEmail(email);
 
@@ -84,10 +84,18 @@ export async function registerUser(input: AuthRegisterInput) {
   }
 
   if (!data.session) {
-    throw new AuthApiError('Check your Sharda email inbox to confirm your account, then sign in.');
+    return {
+      session: null,
+      requiresEmailVerification: true,
+      email,
+    };
   }
 
-  return mapSupabaseSession(data.session);
+  return {
+    session: mapSupabaseSession(data.session),
+    requiresEmailVerification: false,
+    email,
+  };
 }
 
 export async function loginUser(input: AuthLoginInput) {

@@ -16,7 +16,7 @@ import type { ParsedIdCard } from '@/types';
 type AuthMode = 'login' | 'register';
 
 export default function AuthPage() {
-  const { login, register, session } = useAuth();
+  const { login, register, refreshSession, session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string } | null)?.from || ROUTES.dashboard;
@@ -33,6 +33,8 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState('');
   const [emailTouched, setEmailTouched] = React.useState(false);
+  const [awaitingVerification, setAwaitingVerification] = React.useState(false);
+  const [verificationEmail, setVerificationEmail] = React.useState('');
 
   useDocumentMeta(
     'Sharda authentication',
@@ -41,13 +43,29 @@ export default function AuthPage() {
 
   React.useEffect(() => {
     if (session) {
-      navigate(redirectTo, { replace: true });
+      navigate(awaitingVerification ? ROUTES.home : redirectTo, { replace: true });
     }
-  }, [navigate, redirectTo, session]);
+  }, [awaitingVerification, navigate, redirectTo, session]);
 
   React.useEffect(() => {
     setError('');
+    setAwaitingVerification(false);
+    setVerificationEmail('');
   }, [mode]);
+
+  React.useEffect(() => {
+    if (!awaitingVerification || session) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      void refreshSession();
+    }, 4000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [awaitingVerification, refreshSession, session]);
 
   const normalizedEmail = email.trim().toLowerCase();
   const emailLooksValid = isShardaEmail(normalizedEmail);
@@ -135,7 +153,7 @@ export default function AuthPage() {
         return;
       }
 
-      await register({
+      const result = await register({
         email,
         password,
         phone: normalizePhone(phone),
@@ -143,6 +161,12 @@ export default function AuthPage() {
         studentIdNumber: normalizeStudentId(studentIdNumber),
         idCardImageName,
       });
+
+      if (result.requiresEmailVerification) {
+        setAwaitingVerification(true);
+        setVerificationEmail(result.email);
+        return;
+      }
 
       navigate(redirectTo, { replace: true });
     } catch (submissionError) {
@@ -202,6 +226,18 @@ export default function AuthPage() {
           </div>
 
           {error ? <ErrorBanner message={error} /> : null}
+          {awaitingVerification ? (
+            <div className="space-y-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-100">
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-semibold text-white">Verify your email to continue</p>
+                <StatusBadge tone="success">waiting</StatusBadge>
+              </div>
+              <p>
+                We sent a verification link to <span className="font-medium text-white">{verificationEmail || normalizedEmail}</span>.
+                Open it, finish verification, and this page will move you to the home page automatically.
+              </p>
+            </div>
+          ) : null}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
             <FormField htmlFor="auth-email" label="Sharda email">
@@ -309,8 +345,8 @@ export default function AuthPage() {
               <p className="text-sm text-red-300">Use a Sharda University email such as `@sharda.ac.in` or `@ug.sharda.ac.in`.</p>
             ) : null}
 
-            <Button className="w-full" size="lg" type="submit" disabled={isRegisterDisabled}>
-              {submitting ? 'Processing...' : mode === 'register' ? 'Create account' : 'Login'}
+            <Button className="w-full" size="lg" type="submit" disabled={awaitingVerification || isRegisterDisabled}>
+              {submitting ? 'Processing...' : awaitingVerification ? 'Waiting for email verification...' : mode === 'register' ? 'Create account' : 'Login'}
             </Button>
           </form>
         </Card>
