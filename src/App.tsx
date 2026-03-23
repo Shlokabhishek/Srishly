@@ -26,34 +26,36 @@ function AppRoutes() {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<Home />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route path="/send" element={<SendParcel />} />
-        <Route path="/find" element={<FindTrip />} />
-        <Route path="/find-traveler" element={<FindTraveler />} />
-        <Route path="/trust" element={<TrustCenter />} />
-        <Route path="/how-it-works" element={<TrustCenter />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/verification-hub"
-          element={
-            <ProtectedRoute>
-              <VerificationHub />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </AnimatePresence>
+    <RouteErrorBoundary resetKey={location.pathname}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
+          <Route path="/" element={<Home />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/send" element={<SendParcel />} />
+          <Route path="/find" element={<FindTrip />} />
+          <Route path="/find-traveler" element={<FindTraveler />} />
+          <Route path="/trust" element={<TrustCenter />} />
+          <Route path="/how-it-works" element={<TrustCenter />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/verification-hub"
+            element={
+              <ProtectedRoute>
+                <VerificationHub />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AnimatePresence>
+    </RouteErrorBoundary>
   );
 }
 
@@ -72,11 +74,9 @@ export default function App() {
           <div className="flex min-h-screen flex-col bg-slate-950 text-slate-50">
             <Header />
             <main id="main-content" className="flex-1">
-              <RouteErrorBoundary>
-                <React.Suspense fallback={<PageLoader label="Loading experience" fullScreen />}>
-                  <AppRoutes />
-                </React.Suspense>
-              </RouteErrorBoundary>
+              <React.Suspense fallback={<PageLoader label="Loading experience" fullScreen />}>
+                <AppRoutes />
+              </React.Suspense>
             </main>
             <Footer />
             <BottomNav />

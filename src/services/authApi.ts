@@ -11,6 +11,29 @@ export class AuthApiError extends Error {
   }
 }
 
+function mapAuthErrorMessage(message: string) {
+  const normalized = message.trim();
+  const lowerMessage = normalized.toLowerCase();
+
+  if (lowerMessage.includes('only request this after')) {
+    return 'Too many sign-up attempts were made for this email. Wait a minute, then try again, or switch to Login if the account already exists.';
+  }
+
+  if (lowerMessage.includes('user already registered')) {
+    return 'This Sharda email is already registered. Switch to Login and sign in instead.';
+  }
+
+  if (lowerMessage.includes('email rate limit exceeded')) {
+    return 'Too many verification emails were requested. Wait a minute and try again.';
+  }
+
+  if (lowerMessage.includes('invalid login credentials')) {
+    return 'The email or password is incorrect. Check your details and try again.';
+  }
+
+  return normalized;
+}
+
 function mapUser(user: User) {
   return {
     id: user.id,
@@ -57,7 +80,7 @@ export async function registerUser(input: AuthRegisterInput) {
   });
 
   if (error) {
-    throw new AuthApiError(error.message);
+    throw new AuthApiError(mapAuthErrorMessage(error.message));
   }
 
   if (!data.session) {
@@ -77,7 +100,7 @@ export async function loginUser(input: AuthLoginInput) {
   });
 
   if (error) {
-    throw new AuthApiError(error.message);
+    throw new AuthApiError(mapAuthErrorMessage(error.message));
   }
 
   if (!data.session) {
@@ -94,7 +117,7 @@ export async function getCurrentSession() {
   } = await supabase.auth.getSession();
 
   if (error) {
-    throw new AuthApiError(error.message);
+    throw new AuthApiError(mapAuthErrorMessage(error.message));
   }
 
   return session ? mapSupabaseSession(session) : null;
@@ -104,7 +127,7 @@ export async function logoutUser() {
   const { error } = await supabase.auth.signOut();
 
   if (error) {
-    throw new AuthApiError(error.message);
+    throw new AuthApiError(mapAuthErrorMessage(error.message));
   }
 
   return { success: true as const };

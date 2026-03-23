@@ -16,10 +16,28 @@ interface ApiErrorResponse {
   error?: string;
 }
 
+interface DashboardSnapshotResponse {
+  parcels?: Parcel[];
+  trips?: Trip[];
+  verificationCases?: VerificationCase[];
+}
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api';
 
 function shouldUseFallbackApi(error: unknown) {
   return import.meta.env.DEV && error instanceof Error;
+}
+
+function ensureArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function normalizeDashboardSnapshot(snapshot: DashboardSnapshotResponse) {
+  return {
+    parcels: ensureArray<Parcel>(snapshot.parcels),
+    trips: ensureArray<Trip>(snapshot.trips),
+    verificationCases: ensureArray<VerificationCase>(snapshot.verificationCases),
+  };
 }
 
 async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
@@ -259,11 +277,8 @@ export async function getDashboardSnapshot(): Promise<{
   verificationCases: VerificationCase[];
 }> {
   try {
-    return await requestApi<{
-      parcels: Parcel[];
-      trips: Trip[];
-      verificationCases: VerificationCase[];
-    }>('/dashboard');
+    const snapshot = await requestApi<DashboardSnapshotResponse>('/dashboard');
+    return normalizeDashboardSnapshot(snapshot);
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
       const [parcels, trips, verificationCases] = await Promise.all([

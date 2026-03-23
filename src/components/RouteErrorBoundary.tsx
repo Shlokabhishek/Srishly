@@ -2,7 +2,7 @@ import * as React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default class RouteErrorBoundary extends React.Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; resetKey?: string },
   { hasError: boolean }
 > {
   public constructor(props: { children: React.ReactNode }) {
@@ -12,6 +12,12 @@ export default class RouteErrorBoundary extends React.Component<
 
   public static getDerivedStateFromError() {
     return { hasError: true };
+  }
+
+  public componentDidUpdate(previousProps: { resetKey?: string }) {
+    if (this.state.hasError && this.props.resetKey !== previousProps.resetKey) {
+      this.setState({ hasError: false });
+    }
   }
 
   public render() {

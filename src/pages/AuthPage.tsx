@@ -45,6 +45,10 @@ export default function AuthPage() {
     }
   }, [navigate, redirectTo, session]);
 
+  React.useEffect(() => {
+    setError('');
+  }, [mode]);
+
   const normalizedEmail = email.trim().toLowerCase();
   const emailLooksValid = isShardaEmail(normalizedEmail);
   const shouldShowEmailError = emailTouched && normalizedEmail.length > 0 && !emailLooksValid;
