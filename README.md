@@ -1,98 +1,119 @@
 # Srishly Logistics Network
 
-Srishly is a production-oriented React + Vite single-page application for peer-to-peer parcel delivery. The app focuses on secure request creation, route discovery, traveler verification, and a sender/traveler dashboard that stays responsive on mobile and desktop.
+Srishly is a Vite + React application for peer-to-peer parcel logistics. The app now supports Vercel deployment with MongoDB Atlas-backed serverless APIs for parcels, trips, dashboard state, and verification queues.
 
-## Tech Stack
+## Stack
 
-- React 19: component-driven UI and concurrent-friendly rendering.
-- TypeScript: stricter types for safer refactors and better runtime resilience.
-- React Router: SPA routing with lazy loaded pages.
-- Tailwind CSS v4: design tokens and responsive styling.
-- Motion: lightweight page and component transitions.
-- Vitest + Testing Library: unit and UI behavior tests.
-- Netlify configuration: SPA rewrites plus secure response headers for deployment.
+- React 19 + TypeScript
+- Vite for the frontend build
+- React Router for SPA routing
+- Tailwind CSS v4 for styling
+- Motion for UI transitions
+- Vercel serverless functions in `api/`
+- MongoDB Atlas for persistent storage
+- Vitest + Testing Library for tests
 
-## Why This Structure
+## Project Structure
 
-- `src/components`: shared layout, feedback, and UI primitives to reduce duplication.
-- `src/pages`: route-level screens, lazy loaded for smaller initial bundles.
-- `src/data`: trusted seed data for mock production flows.
-- `src/lib`: formatting, validation, storage, and low-level utilities.
-- `src/context`: app-wide sender/traveler mode state with persistence.
-- `src/hooks`: reusable browser hooks such as document metadata and persisted state.
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 20+
-- npm 10+
-
-### Install
-
-```bash
-npm install
-```
-
-### Run Locally
-
-```bash
-npm run dev
-```
-
-The app starts on `http://localhost:3000`.
-
-### Type Check
-
-```bash
-npm run typecheck
-```
-
-### Test
-
-```bash
-npm run test:run
-```
-
-### Production Build
-
-```bash
-npm run build
-```
+- `src/`: frontend application
+- `api/`: Vercel serverless API routes and MongoDB access
+- `src/services/mockApi.ts`: client data layer that uses `/api/*` in production and falls back only during local frontend-only development
+- `vercel.json`: Vercel SPA rewrite and output configuration
 
 ## Environment Variables
 
-The current app does not require any secrets on the client. Keep sensitive credentials off the frontend. Use environment variables only for non-secret build metadata until a backend is introduced.
+Create a local `.env` or configure these in Vercel:
 
-See [.env.example](./.env.example).
+```bash
+VITE_APP_NAME=Srishly
+VITE_SUPPORT_EMAIL=team.srishly@gmail.com
+VITE_API_BASE_URL=
+MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/<db>?retryWrites=true&w=majority
+MONGODB_DB_NAME=srishly
+```
 
-## Deployment
+Notes:
 
-The project is ready for Netlify:
+- Leave `VITE_API_BASE_URL` empty on Vercel so the frontend uses same-origin `/api`.
+- Never expose `MONGODB_URI` to the client. It is only used by the serverless functions.
 
-- `netlify.toml` defines the build command, publish directory, SPA rewrites, and security headers.
-- `public/_redirects` ensures deep links resolve to `index.html`.
+## MongoDB Atlas Setup
 
-You can deploy with:
+1. Create a MongoDB Atlas cluster.
+2. Create a database user with read/write access.
+3. Add your Vercel deployment IP access rule, or temporarily allow access from anywhere for testing.
+4. Copy the connection string into `MONGODB_URI`.
+5. Set `MONGODB_DB_NAME=srishly` or your preferred database name.
+
+The API auto-seeds demo data into empty collections:
+
+- `parcels`
+- `trips`
+- `verificationCases`
+
+## Local Development
+
+### Frontend only
+
+```bash
+npm install
+npm run dev
+```
+
+This mode can fall back to mock/local browser storage if the API is unavailable.
+
+### Full Vercel + Atlas stack
+
+Use Vercel’s local runtime so the `api/` folder runs correctly:
+
+```bash
+npm install
+npx vercel dev
+```
+
+## Scripts
 
 ```bash
 npm run build
+npm run typecheck
+npm run test:run
 ```
 
-Publish the generated `dist/` folder.
+## Vercel Deployment
+
+1. Import the project into Vercel.
+2. Set the project root to `srishly/srishly1` if needed.
+3. Add the environment variables from the section above.
+4. Deploy.
+
+The app is configured so:
+
+- Vercel serves the Vite build output from `dist/`
+- `/api/*` routes hit serverless functions
+- all non-API routes rewrite to `index.html` for SPA routing
+
+## API Endpoints
+
+- `GET /api/parcels`
+- `POST /api/parcels`
+- `PATCH /api/parcels`
+- `GET /api/trips`
+- `GET /api/verification-cases`
+- `PATCH /api/verification-cases`
+- `GET /api/dashboard`
+
+## Verification
+
+Run:
+
+```bash
+npm run build
+npm run test:run
+```
 
 ## Security Notes
 
-- No hardcoded secrets or client-exposed API keys.
-- Input validation and sanitization run before data is persisted.
-- CSP and other hardening headers are configured in `netlify.toml`.
-- React escaping is preserved throughout; no `dangerouslySetInnerHTML` is used.
-
-## Project Features
-
-- Multi-step parcel request flow with validation and submission feedback.
-- Route discovery for travelers and senders.
-- Sender/traveler dashboard with persisted local mock data.
-- Trust center and verification review workflow.
-- Loading, empty, and error states across core flows.
-- Responsive navigation and accessible form labeling.
+- MongoDB secrets stay server-side in Vercel env vars.
+- Request validation runs before parcel creation and delivery completion.
+- Frontend rendering remains safe with React escaping.
+- Atlas access is centralized through reusable serverless data helpers in `api/_lib/`.
