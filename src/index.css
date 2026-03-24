@@ -36,6 +36,15 @@ textarea {
   font: inherit;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: rgba(148, 163, 184, 0.9);

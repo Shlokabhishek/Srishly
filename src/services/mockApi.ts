@@ -27,7 +27,7 @@ interface DashboardSnapshotResponse {
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api';
 
 function shouldUseFallbackApi(error: unknown) {
-  return import.meta.env.DEV && error instanceof Error;
+  return error instanceof Error;
 }
 
 function ensureArray<T>(value: unknown): T[] {
@@ -93,7 +93,7 @@ function setStoredDeliveryThreads(threads: DeliveryThread[]) {
   writeLocalStorage(STORAGE_KEYS.deliveryThreads, threads);
 }
 
-function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThread {
+function createDeliveryThread(parcel: Parcel, travelerName: string, pickupPoint: string, dropPoint: string): DeliveryThread {
   const isHighValue = parcel.declaredValue === 'More than Rs 5,000' || parcel.declaredValue === 'Rs 2,000 - Rs 5,000';
   const tagStart = parcel.fromCity.slice(0, 3).toUpperCase();
   const tagEnd = parcel.toCity.slice(0, 3).toUpperCase();
@@ -108,8 +108,8 @@ function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThr
     fromCity: parcel.fromCity,
     toCity: parcel.toCity,
     securityGroupTag: `SG-${tagStart}-${tagEnd}-${Math.floor(10 + Math.random() * 90)}`,
-    pickupSummary: `Traveler will share the exact pickup point for ${parcel.fromCity} in secure chat before handoff.`,
-    dropoffSummary: `Traveler will confirm the final ${parcel.toCity} drop point in chat before arrival.`,
+    pickupSummary: pickupPoint,
+    dropoffSummary: dropPoint,
     currentLocation: `Awaiting pickup scan in ${parcel.fromCity}`,
     lastUpdated: new Date().toISOString(),
     progress: 8,
@@ -127,7 +127,7 @@ function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThr
       {
         id: createId('message'),
         actor: 'traveler',
-        text: `I accepted this request for ${parcel.fromCity} to ${parcel.toCity}. I will share the pickup point here shortly.`,
+        text: `I accepted this request for ${parcel.fromCity} to ${parcel.toCity}. Pickup point: ${pickupPoint}. Drop point: ${dropPoint}.`,
         sentAt: new Date().toISOString(),
       },
     ],
@@ -176,8 +176,8 @@ async function createFallbackParcel(draft: ParcelDraftInput) {
     weight: Number(sanitized.weight),
     dimensions: sanitized.dimensions as Parcel['dimensions'],
     declaredValue: sanitized.declaredValue,
-    pickupAddress: sanitized.pickupAddress,
-    dropoffAddress: sanitized.dropoffAddress,
+    pickupAddress: sanitized.pickupAddress || 'Selected by traveler after acceptance',
+    dropoffAddress: sanitized.dropoffAddress || 'Selected by traveler after acceptance',
     reward: Number(sanitized.reward),
     status: 'posted',
     fromCity: sanitized.fromCity,
@@ -220,11 +220,17 @@ async function completeFallbackParcelDelivery(id: string, otp: string) {
   return nextParcels;
 }
 
-async function acceptFallbackParcelRequest(id: string, travelerName: string) {
+async function acceptFallbackParcelRequest(id: string, travelerName: string, pickupPoint: string, dropPoint: string) {
   const trimmedTravelerName = travelerName.trim();
+  const trimmedPickupPoint = pickupPoint.trim();
+  const trimmedDropPoint = dropPoint.trim();
 
   if (trimmedTravelerName.length < 2) {
     throw new AppValidationError('Traveler name is required to accept this request.');
+  }
+
+  if (trimmedPickupPoint.length < 8 || trimmedDropPoint.length < 8) {
+    throw new AppValidationError('Traveler must choose pickup and drop points before accepting the request.');
   }
 
   const parcels = getStoredParcels();
@@ -264,7 +270,15 @@ async function acceptFallbackParcelRequest(id: string, travelerName: string) {
   const hasThread = currentThreads.some((thread) => thread.parcelId === currentParcel.id);
 
   if (!hasThread) {
-    setStoredDeliveryThreads([createDeliveryThread({ ...currentParcel, travelerName: trimmedTravelerName, status: 'matched' }, trimmedTravelerName), ...currentThreads]);
+    setStoredDeliveryThreads([
+      createDeliveryThread(
+        { ...currentParcel, travelerName: trimmedTravelerName, status: 'matched' },
+        trimmedTravelerName,
+        trimmedPickupPoint,
+        trimmedDropPoint,
+      ),
+      ...currentThreads,
+    ]);
   }
 
   await sleep();
@@ -361,7 +375,7 @@ export async function completeParcelDelivery(id: string, otp: string) {
   }
 }
 
-export async function acceptParcelRequest(id: string, travelerName: string) {
+export async function acceptParcelRequest(id: string, travelerName: string, pickupPoint: string, dropPoint: string) {
   try {
     const updated = await requestApi<Parcel>('/parcels', {
       method: 'PATCH',
@@ -369,13 +383,15 @@ export async function acceptParcelRequest(id: string, travelerName: string) {
         action: 'acceptRequest',
         id,
         travelerName,
+        pickupPoint,
+        dropPoint,
       }),
     });
 
     return (await getParcels()).map((parcel) => (parcel.id === updated.id ? updated : parcel));
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
-      return acceptFallbackParcelRequest(id, travelerName);
+      return acceptFallbackParcelRequest(id, travelerName, pickupPoint, dropPoint);
     }
 
     throw error;

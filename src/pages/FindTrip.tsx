@@ -41,6 +41,7 @@ export default function FindTrip() {
   const [toCity, setToCity] = React.useState(searchParams.get('to') ?? '');
   const [query, setQuery] = React.useState('');
   const [maxWeight, setMaxWeight] = React.useState('15');
+  const [handoffDrafts, setHandoffDrafts] = React.useState<Record<string, { pickupPoint: string; dropPoint: string }>>({});
   const [selectedParcelId, setSelectedParcelId] = React.useState('');
   const deferredQuery = React.useDeferredValue(query);
 
@@ -99,11 +100,17 @@ export default function FindTrip() {
       return;
     }
 
+    const handoffDraft = handoffDrafts[parcelId] ?? { pickupPoint: '', dropPoint: '' };
+    if (handoffDraft.pickupPoint.trim().length < 8 || handoffDraft.dropPoint.trim().length < 8) {
+      setAcceptError('Choose both pickup and drop points before accepting the request.');
+      return;
+    }
+
     setAcceptingParcelId(parcelId);
 
     try {
       const travelerName = session.user.name;
-      const nextParcels = await acceptParcelRequest(parcelId, travelerName);
+      const nextParcels = await acceptParcelRequest(parcelId, travelerName, handoffDraft.pickupPoint, handoffDraft.dropPoint);
       setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
       setSelectedParcelId(parcelId);
       setAcceptMessage(`You accepted ${parcelId}. The user has been notified that ${travelerName} is assigned.`);
@@ -262,6 +269,46 @@ export default function FindTrip() {
                         <p className="mt-2 text-sm font-medium text-white">{parcel.dimensions}</p>
                       </div>
                     </div>
+
+                    {parcel.status === 'posted' ? (
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="space-y-2 text-sm text-slate-300">
+                          <span className="block font-medium">Traveler pickup point</span>
+                          <input
+                            value={handoffDrafts[parcel.id]?.pickupPoint ?? ''}
+                            onChange={(event) =>
+                              setHandoffDrafts((current) => ({
+                                ...current,
+                                [parcel.id]: {
+                                  pickupPoint: event.target.value,
+                                  dropPoint: current[parcel.id]?.dropPoint ?? '',
+                                },
+                              }))
+                            }
+                            placeholder="Example: Metro Gate 2, Delhi at 7:30 PM"
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                          />
+                        </label>
+
+                        <label className="space-y-2 text-sm text-slate-300">
+                          <span className="block font-medium">Traveler drop point</span>
+                          <input
+                            value={handoffDrafts[parcel.id]?.dropPoint ?? ''}
+                            onChange={(event) =>
+                              setHandoffDrafts((current) => ({
+                                ...current,
+                                [parcel.id]: {
+                                  pickupPoint: current[parcel.id]?.pickupPoint ?? '',
+                                  dropPoint: event.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Example: Station exit gate, Mumbai"
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                          />
+                        </label>
+                      </div>
+                    ) : null}
 
                     <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
                       <Button variant="secondary">View details</Button>

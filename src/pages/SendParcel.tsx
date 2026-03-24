@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, Package2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, MapPinned, Package2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
@@ -15,7 +15,7 @@ import type { FieldErrors, ParcelDraftInput } from '@/types';
 
 const stepLabels = [
   { id: 1, title: 'Parcel details' },
-  { id: 2, title: 'Route and pickup' },
+  { id: 2, title: 'Route and schedule' },
   { id: 3, title: 'Reward and review' },
 ];
 
@@ -29,7 +29,7 @@ export default function SendParcel() {
 
   useDocumentMeta(
     'Post a parcel request',
-    'Create a secure delivery request with validation, escrow messaging, and route-based matching.',
+    'Create a secure delivery request with route validation, traveler assignment, and traveler-selected handoff points.',
   );
 
   function updateField<K extends keyof ParcelDraftInput>(field: K, value: ParcelDraftInput[K]) {
@@ -97,8 +97,8 @@ export default function SendParcel() {
           <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Sender workflow</p>
           <h1 className="text-4xl font-semibold text-white">Post a delivery request with validation built in.</h1>
           <p className="max-w-3xl text-sm leading-7 text-slate-300">
-            This flow now validates every major field before submission, stores data safely, and redirects to the dashboard
-            after a successful request.
+            Senders now submit the parcel, route, schedule, and reward only. The traveler chooses the exact pickup and drop
+            points after accepting the request.
           </p>
         </div>
 
@@ -212,7 +212,7 @@ export default function SendParcel() {
                       value={draft.description}
                       onChange={(event) => updateField('description', event.target.value)}
                       className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
-                      placeholder="Example: fragile, keep upright, or pickup landmark"
+                      placeholder="Example: fragile, keep upright, or item handling note"
                     />
                   </FormField>
 
@@ -288,29 +288,12 @@ export default function SendParcel() {
                     </FormField>
                   </div>
 
-                  <FormField error={errors.pickupAddress} htmlFor="pickupAddress" label="Pickup address">
-                    <textarea
-                      id="pickupAddress"
-                      rows={4}
-                      value={draft.pickupAddress}
-                      onChange={(event) => updateField('pickupAddress', event.target.value)}
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
-                      placeholder="Apartment, landmark, and contact-safe handoff instructions"
-                    />
-                  </FormField>
-
-                  <FormField error={errors.dropoffAddress} htmlFor="dropoffAddress" label="Drop-off address">
-                    <textarea
-                      id="dropoffAddress"
-                      rows={4}
-                      value={draft.dropoffAddress}
-                      onChange={(event) => updateField('dropoffAddress', event.target.value)}
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
-                      placeholder="Receiver address and the best delivery window"
-                    />
-                  </FormField>
-
-                  <FormField error={errors.pickupDate} htmlFor="pickupDate" label="Pickup date">
+                  <FormField
+                    error={errors.pickupDate}
+                    htmlFor="pickupDate"
+                    label="Preferred travel date"
+                    description="This is the date travelers use to decide whether they are already going on the same route."
+                  >
                     <input
                       id="pickupDate"
                       min={today}
@@ -320,6 +303,18 @@ export default function SendParcel() {
                       className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
                     />
                   </FormField>
+
+                  <Card className="space-y-4 border-white/10 bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <MapPinned className="h-5 w-5 text-amber-300" />
+                      <h2 className="text-lg font-semibold text-white">Traveler chooses the handoff points</h2>
+                    </div>
+                    <div className="space-y-2 text-sm leading-7 text-slate-300">
+                      <p>The sender only posts the route and parcel details.</p>
+                      <p>After acceptance, the traveler selects the exact pickup point and drop point inside the secure assignment flow.</p>
+                      <p>This keeps handoff control with the traveler who is actually traveling on that route.</p>
+                    </div>
+                  </Card>
                 </motion.div>
               ) : null}
 
@@ -351,7 +346,7 @@ export default function SendParcel() {
                     <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
                       <p><span className="text-slate-500">Route:</span> {draft.fromCity || 'Origin'} -&gt; {draft.toCity || 'Destination'}</p>
                       <p><span className="text-slate-500">Category:</span> {draft.parcelCategory || 'Pending selection'}</p>
-                      <p><span className="text-slate-500">Pickup date:</span> {draft.pickupDate || 'Not set'}</p>
+                      <p><span className="text-slate-500">Travel date:</span> {draft.pickupDate || 'Not set'}</p>
                       <p><span className="text-slate-500">Reward:</span> {draft.reward ? `Rs ${draft.reward}` : 'Not set'}</p>
                     </div>
                   </Card>
@@ -410,7 +405,7 @@ export default function SendParcel() {
               <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Why this is safer</p>
               <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
                 <li>Validated city pairs reduce broken matches and inconsistent route data.</li>
-                <li>Sanitized notes and address fields avoid unsafe client-rendered content.</li>
+                <li>Travelers choose the final pickup and drop points only after route acceptance.</li>
                 <li>Submission errors are surfaced clearly before anything is stored.</li>
               </ul>
             </Card>
@@ -419,8 +414,8 @@ export default function SendParcel() {
               <h2 className="text-xl font-semibold text-white">What happens after submission?</h2>
               <ol className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
                 <li>1. Your request is saved to persistent local data for dashboard review.</li>
-                <li>2. Travelers see the route in the marketplace views and confirm pickup or drop details in secure chat.</li>
-                <li>3. Live map tracking and security-group tags stay visible until final OTP handoff.</li>
+                <li>2. Travelers see the route in the marketplace views and accept only if they are already going that way.</li>
+                <li>3. The assigned traveler chooses pickup and drop points, then the secure chat and live map take over.</li>
               </ol>
             </Card>
           </div>

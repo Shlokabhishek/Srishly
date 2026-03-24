@@ -16,6 +16,8 @@ interface ParcelPatchBody {
   otp?: string;
   status?: ParcelStatus;
   travelerName?: string;
+  pickupPoint?: string;
+  dropPoint?: string;
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
@@ -43,7 +45,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     if (body.action === 'acceptRequest') {
-      const parcel = await acceptParcelRequestRecord(body.id, body.travelerName ?? '');
+      const parcel = await acceptParcelRequestRecord(body.id, body.travelerName ?? '', body.pickupPoint ?? '', body.dropPoint ?? '');
       return sendJson(response, 200, parcel);
     }
 

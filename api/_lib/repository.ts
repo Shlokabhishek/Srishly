@@ -67,7 +67,7 @@ export async function getDeliveryThreadsCollection() {
   return collection;
 }
 
-function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThread {
+function createDeliveryThread(parcel: Parcel, travelerName: string, pickupPoint: string, dropPoint: string): DeliveryThread {
   const isHighValue = parcel.declaredValue === 'More than Rs 5,000' || parcel.declaredValue === 'Rs 2,000 - Rs 5,000';
   const tagStart = parcel.fromCity.slice(0, 3).toUpperCase();
   const tagEnd = parcel.toCity.slice(0, 3).toUpperCase();
@@ -81,8 +81,8 @@ function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThr
     fromCity: parcel.fromCity,
     toCity: parcel.toCity,
     securityGroupTag: `SG-${tagStart}-${tagEnd}-${Math.floor(10 + Math.random() * 90)}`,
-    pickupSummary: `Traveler will share the exact pickup point for ${parcel.fromCity} in secure chat before handoff.`,
-    dropoffSummary: `Traveler will confirm the final ${parcel.toCity} drop point in chat before arrival.`,
+    pickupSummary: pickupPoint,
+    dropoffSummary: dropPoint,
     currentLocation: `Awaiting pickup scan in ${parcel.fromCity}`,
     lastUpdated: new Date().toISOString(),
     progress: 8,
@@ -100,7 +100,7 @@ function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThr
       {
         id: createId('message'),
         actor: 'traveler',
-        text: `I accepted this request for ${parcel.fromCity} to ${parcel.toCity}. I will share the pickup point here shortly.`,
+        text: `I accepted this request for ${parcel.fromCity} to ${parcel.toCity}. Pickup point: ${pickupPoint}. Drop point: ${dropPoint}.`,
         sentAt: new Date().toISOString(),
       },
     ],
@@ -158,8 +158,8 @@ export async function createParcelRecord(draft: ParcelDraftInput) {
     weight: Number(sanitized.weight),
     dimensions: sanitized.dimensions as Parcel['dimensions'],
     declaredValue: sanitized.declaredValue,
-    pickupAddress: sanitized.pickupAddress,
-    dropoffAddress: sanitized.dropoffAddress,
+    pickupAddress: sanitized.pickupAddress || 'Selected by traveler after acceptance',
+    dropoffAddress: sanitized.dropoffAddress || 'Selected by traveler after acceptance',
     reward: Number(sanitized.reward),
     status: 'posted',
     fromCity: sanitized.fromCity,
@@ -220,11 +220,17 @@ export async function completeParcelDeliveryRecord(id: string, otp: string) {
   return updated;
 }
 
-export async function acceptParcelRequestRecord(id: string, travelerName: string) {
+export async function acceptParcelRequestRecord(id: string, travelerName: string, pickupPoint: string, dropPoint: string) {
   const trimmedTravelerName = travelerName.trim();
+  const trimmedPickupPoint = pickupPoint.trim();
+  const trimmedDropPoint = dropPoint.trim();
 
   if (trimmedTravelerName.length < 2) {
     throw new ApiError(400, 'Traveler name is required to accept this request.');
+  }
+
+  if (trimmedPickupPoint.length < 8 || trimmedDropPoint.length < 8) {
+    throw new ApiError(400, 'Traveler must choose pickup and drop points before accepting the request.');
   }
 
   const parcelsCollection = await getParcelsCollection();
@@ -269,7 +275,14 @@ export async function acceptParcelRequestRecord(id: string, travelerName: string
   const existingThread = await deliveryThreadsCollection.findOne({ parcelId: parcel.id }, { projection: { _id: 0 } });
 
   if (!existingThread) {
-    await deliveryThreadsCollection.insertOne(createDeliveryThread({ ...parcel, travelerName: trimmedTravelerName, status: 'matched' }, trimmedTravelerName));
+    await deliveryThreadsCollection.insertOne(
+      createDeliveryThread(
+        { ...parcel, travelerName: trimmedTravelerName, status: 'matched' },
+        trimmedTravelerName,
+        trimmedPickupPoint,
+        trimmedDropPoint,
+      ),
+    );
   }
 
   return updated;

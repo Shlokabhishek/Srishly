@@ -78,14 +78,6 @@ export function validateParcelDraft(draft: ParcelDraftInput): FieldErrors<Parcel
     errors.toCity = routeErrors.toCity;
   }
 
-  if (sanitizedDraft.pickupAddress.length < 12) {
-    errors.pickupAddress = 'Pickup address must be at least 12 characters.';
-  }
-
-  if (sanitizedDraft.dropoffAddress.length < 12) {
-    errors.dropoffAddress = 'Drop-off address must be at least 12 characters.';
-  }
-
   const reward = Number(sanitizedDraft.reward);
   if (!Number.isFinite(reward) || reward < 100 || reward > 5000) {
     errors.reward = 'Reward must be between Rs 100 and Rs 5,000.';
@@ -124,7 +116,7 @@ export function isStepValid(
 ): boolean {
   const stepFields: Record<number, ParcelDraftField[]> = {
     1: ['parcelCategory', 'weight', 'dimensions', 'declaredValue', 'description', 'photoNames'],
-    2: ['fromCity', 'toCity', 'pickupAddress', 'dropoffAddress', 'pickupDate'],
+    2: ['fromCity', 'toCity', 'pickupDate'],
     3: ['reward', 'termsAccepted'],
   };
 
