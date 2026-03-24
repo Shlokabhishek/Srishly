@@ -93,10 +93,16 @@ export default function FindTrip() {
   async function handleAccept(parcelId: string) {
     setAcceptMessage('');
     setAcceptError('');
+
+    if (!session) {
+      setAcceptError('Sign in as a traveler before accepting a parcel request.');
+      return;
+    }
+
     setAcceptingParcelId(parcelId);
 
     try {
-      const travelerName = session?.user.name ?? 'Current Traveler';
+      const travelerName = session.user.name;
       const nextParcels = await acceptParcelRequest(parcelId, travelerName);
       setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
       setSelectedParcelId(parcelId);
@@ -247,32 +253,32 @@ export default function FindTrip() {
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Weight</p>
                         <p className="mt-2 text-sm font-medium text-white">{parcel.weight} kg</p>
                       </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Pickup date</p>
-                          <p className="mt-2 text-sm font-medium text-white">{formatDate(parcel.pickupDate)}</p>
-                        </div>
-                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Size</p>
-                          <p className="mt-2 text-sm font-medium text-white">{parcel.dimensions}</p>
-                        </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Pickup date</p>
+                        <p className="mt-2 text-sm font-medium text-white">{formatDate(parcel.pickupDate)}</p>
                       </div>
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Size</p>
+                        <p className="mt-2 text-sm font-medium text-white">{parcel.dimensions}</p>
+                      </div>
+                    </div>
 
-                      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                        <Button variant="secondary">View details</Button>
-                        {parcel.status === 'posted' ? (
-                          <Button onClick={() => void handleAccept(parcel.id)} disabled={acceptingParcelId === parcel.id}>
-                            {acceptingParcelId === parcel.id ? 'Accepting...' : 'Accept request'}
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button variant="secondary" onClick={() => setSelectedParcelId(parcel.id)}>
-                            Assigned to {parcel.travelerName ?? 'traveler'}
-                          </Button>
-                        )}
-                      </div>
-                    </Card>
-                  </motion.div>
-                ))}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                      <Button variant="secondary">View details</Button>
+                      {parcel.status === 'posted' ? (
+                        <Button onClick={() => void handleAccept(parcel.id)} disabled={acceptingParcelId === parcel.id}>
+                          {acceptingParcelId === parcel.id ? 'Accepting...' : session ? 'Accept request' : 'Sign in to accept'}
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="secondary" onClick={() => setSelectedParcelId(parcel.id)}>
+                          Assigned to {parcel.travelerName ?? 'traveler'}
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
             </div>
           </div>
         </div>

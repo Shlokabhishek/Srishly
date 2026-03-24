@@ -1,9 +1,9 @@
-import { seedAssignmentNotifications, seedParcels, seedTrips, seedVerificationCases } from '@/data/mockData';
+import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrips, seedVerificationCases } from '@/data/mockData';
 import { readLocalStorage, writeLocalStorage } from '@/lib/storage';
 import { createId, sleep } from '@/lib/utils';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '@/lib/validation';
 import { STORAGE_KEYS } from '@/constants';
-import type { AssignmentNotification, Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '@/types';
+import type { AssignmentNotification, DeliveryThread, Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '@/types';
 
 export class AppValidationError extends Error {
   constructor(message: string) {
@@ -21,6 +21,7 @@ interface DashboardSnapshotResponse {
   trips?: Trip[];
   verificationCases?: VerificationCase[];
   assignmentNotifications?: AssignmentNotification[];
+  deliveryThreads?: DeliveryThread[];
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api';
@@ -39,6 +40,7 @@ function normalizeDashboardSnapshot(snapshot: DashboardSnapshotResponse) {
     trips: ensureArray<Trip>(snapshot.trips),
     verificationCases: ensureArray<VerificationCase>(snapshot.verificationCases),
     assignmentNotifications: ensureArray<AssignmentNotification>(snapshot.assignmentNotifications),
+    deliveryThreads: ensureArray<DeliveryThread>(snapshot.deliveryThreads),
   };
 }
 
@@ -81,6 +83,78 @@ function getStoredAssignmentNotifications() {
 
 function setStoredAssignmentNotifications(notifications: AssignmentNotification[]) {
   writeLocalStorage(STORAGE_KEYS.assignmentNotifications, notifications);
+}
+
+function getStoredDeliveryThreads() {
+  return readLocalStorage<DeliveryThread[]>(STORAGE_KEYS.deliveryThreads, seedDeliveryThreads);
+}
+
+function setStoredDeliveryThreads(threads: DeliveryThread[]) {
+  writeLocalStorage(STORAGE_KEYS.deliveryThreads, threads);
+}
+
+function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThread {
+  const isHighValue = parcel.declaredValue === 'More than Rs 5,000' || parcel.declaredValue === 'Rs 2,000 - Rs 5,000';
+  const tagStart = parcel.fromCity.slice(0, 3).toUpperCase();
+  const tagEnd = parcel.toCity.slice(0, 3).toUpperCase();
+  const threadId = createId('thread');
+
+  return {
+    id: threadId,
+    parcelId: parcel.id,
+    routeId: `route-${parcel.id}`,
+    travelerName,
+    userName: parcel.senderName,
+    fromCity: parcel.fromCity,
+    toCity: parcel.toCity,
+    securityGroupTag: `SG-${tagStart}-${tagEnd}-${Math.floor(10 + Math.random() * 90)}`,
+    pickupSummary: `Traveler will share the exact pickup point for ${parcel.fromCity} in secure chat before handoff.`,
+    dropoffSummary: `Traveler will confirm the final ${parcel.toCity} drop point in chat before arrival.`,
+    currentLocation: `Awaiting pickup scan in ${parcel.fromCity}`,
+    lastUpdated: new Date().toISOString(),
+    progress: 8,
+    responsibilitySummary: isHighValue
+      ? 'High-value item protocol is active. Keep the parcel sealed, verify the tag at pickup, and complete OTP handoff together.'
+      : 'Traveler is responsible for carrying the sealed parcel on the agreed route and completing handoff only after OTP confirmation.',
+    isHighValue,
+    chat: [
+      {
+        id: createId('message'),
+        actor: 'system',
+        text: `Security group tag created for ${parcel.senderName} and ${travelerName}.`,
+        sentAt: new Date().toISOString(),
+      },
+      {
+        id: createId('message'),
+        actor: 'traveler',
+        text: `I accepted this request for ${parcel.fromCity} to ${parcel.toCity}. I will share the pickup point here shortly.`,
+        sentAt: new Date().toISOString(),
+      },
+    ],
+    checkpoints: [
+      {
+        id: createId('checkpoint'),
+        label: 'Pickup plan',
+        location: parcel.fromCity,
+        etaLabel: 'Waiting for traveler confirmation',
+        status: 'active',
+      },
+      {
+        id: createId('checkpoint'),
+        label: 'In transit',
+        location: `${parcel.fromCity} -> ${parcel.toCity}`,
+        etaLabel: 'Starts after pickup',
+        status: 'upcoming',
+      },
+      {
+        id: createId('checkpoint'),
+        label: 'Drop + OTP handoff',
+        location: parcel.toCity,
+        etaLabel: `ETA on ${parcel.pickupDate}`,
+        status: 'upcoming',
+      },
+    ],
+  };
 }
 
 async function getFallbackParcels() {
@@ -186,6 +260,13 @@ async function acceptFallbackParcelRequest(id: string, travelerName: string) {
   };
 
   setStoredAssignmentNotifications([nextNotification, ...getStoredAssignmentNotifications()]);
+  const currentThreads = getStoredDeliveryThreads();
+  const hasThread = currentThreads.some((thread) => thread.parcelId === currentParcel.id);
+
+  if (!hasThread) {
+    setStoredDeliveryThreads([createDeliveryThread({ ...currentParcel, travelerName: trimmedTravelerName, status: 'matched' }, trimmedTravelerName), ...currentThreads]);
+  }
+
   await sleep();
   return nextParcels;
 }
@@ -331,6 +412,11 @@ export async function getAssignmentNotifications() {
   return getStoredAssignmentNotifications();
 }
 
+export async function getDeliveryThreads() {
+  await sleep(200);
+  return getStoredDeliveryThreads();
+}
+
 export async function reviewVerificationCase(id: string, action: ReviewAction) {
   try {
     const updated = await requestApi<VerificationCase>('/verification-cases', {
@@ -356,17 +442,19 @@ export async function getDashboardSnapshot(): Promise<{
   trips: Trip[];
   verificationCases: VerificationCase[];
   assignmentNotifications: AssignmentNotification[];
+  deliveryThreads: DeliveryThread[];
 }> {
   try {
     const snapshot = await requestApi<DashboardSnapshotResponse>('/dashboard');
     return normalizeDashboardSnapshot(snapshot);
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
-      const [parcels, trips, verificationCases, assignmentNotifications] = await Promise.all([
+      const [parcels, trips, verificationCases, assignmentNotifications, deliveryThreads] = await Promise.all([
         getFallbackParcels(),
         getTrips(),
         getFallbackVerificationCases(),
         getAssignmentNotifications(),
+        getDeliveryThreads(),
       ]);
 
       return {
@@ -374,6 +462,7 @@ export async function getDashboardSnapshot(): Promise<{
         trips,
         verificationCases,
         assignmentNotifications,
+        deliveryThreads,
       };
     }
 

@@ -9,6 +9,9 @@ interface ShipmentMapProps {
   currentLocation?: string;
   progress?: number;
   lastUpdated?: string;
+  fromCity?: string;
+  toCity?: string;
+  travelerName?: string;
 }
 
 const ROUTE_MAP = {
@@ -88,8 +91,20 @@ export default function ShipmentMap({
   currentLocation,
   progress = 42,
   lastUpdated,
+  fromCity,
+  toCity,
+  travelerName,
 }: ShipmentMapProps) {
-  const route = ROUTE_MAP[activeRouteId as keyof typeof ROUTE_MAP] ?? ROUTE_MAP['trip-001'];
+  const route =
+    ROUTE_MAP[activeRouteId as keyof typeof ROUTE_MAP] ??
+    ({
+      ...ROUTE_MAP['trip-001'],
+      id: activeRouteId,
+      from: fromCity ?? ROUTE_MAP['trip-001'].from,
+      to: toCity ?? ROUTE_MAP['trip-001'].to,
+      traveler: travelerName ?? ROUTE_MAP['trip-001'].traveler,
+    } as const);
+
   const controlPoint = getControlPoint(route.start, route.end);
   const shipmentPoint = getQuadraticPoint(route.start, controlPoint, route.end, Math.min(Math.max(progress / 100, 0), 1));
 
@@ -150,12 +165,7 @@ export default function ShipmentMap({
               transition={{ duration: 1.2, repeat: Infinity, repeatType: 'reverse' }}
             />
             <circle r="11" fill="#0f172a" stroke="#f59e0b" strokeWidth="2" />
-            <path
-              d="M -5 -2 h10 v7 h-10 z M -3 -6 h6 v4 h-6 z"
-              fill="#f8fafc"
-              stroke="#f8fafc"
-              strokeWidth="1"
-            />
+            <path d="M -5 -2 h10 v7 h-10 z M -3 -6 h6 v4 h-6 z" fill="#f8fafc" stroke="#f8fafc" strokeWidth="1" />
           </g>
         </svg>
 
@@ -181,7 +191,7 @@ export default function ShipmentMap({
           </div>
           <p className="mt-2 text-xs text-slate-400">
             {progress}% route progress
-            {lastUpdated ? ` • Updated ${formatDateTime(lastUpdated)}` : ''}
+            {lastUpdated ? ` | Updated ${formatDateTime(lastUpdated)}` : ''}
           </p>
         </div>
 

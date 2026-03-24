@@ -26,7 +26,6 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
 import { useMode } from '@/context/ModeContext';
-import { seedDeliveryThreads } from '@/data/mockData';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { completeParcelDelivery, getDashboardSnapshot } from '@/services/mockApi';
@@ -64,13 +63,14 @@ export default function Dashboard() {
   const [trips, setTrips] = React.useState<Trip[]>([]);
   const [verificationCases, setVerificationCases] = React.useState<VerificationCase[]>([]);
   const [assignmentNotifications, setAssignmentNotifications] = React.useState<AssignmentNotification[]>([]);
+  const [deliveryThreads, setDeliveryThreads] = React.useState<DeliveryThread[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
   const [actionMessage, setActionMessage] = React.useState('');
   const [actionError, setActionError] = React.useState('');
   const [otpValues, setOtpValues] = React.useState<Record<string, string>>({});
   const [activeTripId, setActiveTripId] = React.useState('trip-001');
-  const [selectedThreadId, setSelectedThreadId] = React.useState(seedDeliveryThreads[0]?.id ?? '');
+  const [selectedThreadId, setSelectedThreadId] = React.useState('');
   const [routeQuery, setRouteQuery] = React.useState('');
   const deferredRouteQuery = React.useDeferredValue(routeQuery);
 
@@ -91,7 +91,9 @@ export default function Dashboard() {
           setTrips(snapshot.trips);
           setVerificationCases(snapshot.verificationCases);
           setAssignmentNotifications(snapshot.assignmentNotifications);
+          setDeliveryThreads(snapshot.deliveryThreads);
           setActiveTripId(snapshot.trips[0]?.id ?? 'trip-001');
+          setSelectedThreadId((current) => current || snapshot.deliveryThreads[0]?.id || '');
         }
       } catch {
         if (active) {
@@ -117,7 +119,7 @@ export default function Dashboard() {
       ? true
       : `${trip.travelerName} ${trip.fromCity} ${trip.toCity}`.toLowerCase().includes(deferredRouteQuery.toLowerCase()),
   );
-  const activeThread = seedDeliveryThreads.find((thread) => thread.id === selectedThreadId) ?? seedDeliveryThreads[0];
+  const activeThread = deliveryThreads.find((thread) => thread.id === selectedThreadId) ?? deliveryThreads[0];
   const activeMapRouteId = mode === 'sender' ? activeThread?.routeId ?? activeTripId : activeTripId;
   const latestNotification = assignmentNotifications[0];
 
@@ -203,6 +205,9 @@ export default function Dashboard() {
                 currentLocation={mode === 'sender' ? activeThread?.currentLocation : undefined}
                 progress={mode === 'sender' ? activeThread?.progress : undefined}
                 lastUpdated={mode === 'sender' ? activeThread?.lastUpdated : undefined}
+                fromCity={mode === 'sender' ? activeThread?.fromCity : undefined}
+                toCity={mode === 'sender' ? activeThread?.toCity : undefined}
+                travelerName={mode === 'sender' ? activeThread?.travelerName : undefined}
               />
 
               <Card className="space-y-6">
@@ -219,7 +224,7 @@ export default function Dashboard() {
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {seedDeliveryThreads.map((thread) => (
+                    {deliveryThreads.map((thread) => (
                       <button
                         key={thread.id}
                         type="button"
@@ -334,7 +339,7 @@ export default function Dashboard() {
                   ) : (
                     <div className="space-y-4">
                       {parcels.map((parcel) => {
-                        const parcelThread = seedDeliveryThreads.find((thread) => thread.parcelId === parcel.id);
+                        const parcelThread = deliveryThreads.find((thread) => thread.parcelId === parcel.id);
 
                         return (
                           <div key={parcel.id} className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
@@ -510,7 +515,7 @@ export default function Dashboard() {
                         </div>
                         <p className="mt-2">{notification.message}</p>
                         <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">
-                          {notification.route} • {formatDateTime(notification.createdAt)}
+                          {notification.route} | {formatDateTime(notification.createdAt)}
                         </p>
                       </div>
                     ))
@@ -631,7 +636,7 @@ function ChatBubble({ message }: { message: DeliveryChatMessage }) {
         }`}
       >
         <p className="text-xs uppercase tracking-[0.2em] opacity-75">
-          {isSystem ? 'System' : isUser ? 'User' : 'Traveler'} • {formatDateTime(message.sentAt)}
+          {isSystem ? 'System' : isUser ? 'User' : 'Traveler'} | {formatDateTime(message.sentAt)}
         </p>
         <p className="mt-2">{message.text}</p>
       </div>

@@ -2,11 +2,12 @@ import type { Collection } from 'mongodb';
 
 import { getDb } from './mongodb';
 import { ApiError } from './http';
-import { seedAssignmentNotifications, seedParcels, seedTrips, seedVerificationCases } from '../../src/data/mockData';
+import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrips, seedVerificationCases } from '../../src/data/mockData';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '../../src/lib/validation';
 import { createId } from '../../src/lib/utils';
 import type {
   AssignmentNotification,
+  DeliveryThread,
   AuthUser,
   Parcel,
   ParcelDraftInput,
@@ -20,6 +21,7 @@ const COLLECTIONS = {
   trips: 'trips',
   verificationCases: 'verificationCases',
   assignmentNotifications: 'assignmentNotifications',
+  deliveryThreads: 'deliveryThreads',
   users: 'users',
 } as const;
 
@@ -56,6 +58,76 @@ export async function getAssignmentNotificationsCollection() {
   const collection = db.collection<AssignmentNotification>(COLLECTIONS.assignmentNotifications);
   await seedCollectionIfEmpty(collection, seedAssignmentNotifications);
   return collection;
+}
+
+export async function getDeliveryThreadsCollection() {
+  const db = await getDb();
+  const collection = db.collection<DeliveryThread>(COLLECTIONS.deliveryThreads);
+  await seedCollectionIfEmpty(collection, seedDeliveryThreads);
+  return collection;
+}
+
+function createDeliveryThread(parcel: Parcel, travelerName: string): DeliveryThread {
+  const isHighValue = parcel.declaredValue === 'More than Rs 5,000' || parcel.declaredValue === 'Rs 2,000 - Rs 5,000';
+  const tagStart = parcel.fromCity.slice(0, 3).toUpperCase();
+  const tagEnd = parcel.toCity.slice(0, 3).toUpperCase();
+
+  return {
+    id: createId('thread'),
+    parcelId: parcel.id,
+    routeId: `route-${parcel.id}`,
+    travelerName,
+    userName: parcel.senderName,
+    fromCity: parcel.fromCity,
+    toCity: parcel.toCity,
+    securityGroupTag: `SG-${tagStart}-${tagEnd}-${Math.floor(10 + Math.random() * 90)}`,
+    pickupSummary: `Traveler will share the exact pickup point for ${parcel.fromCity} in secure chat before handoff.`,
+    dropoffSummary: `Traveler will confirm the final ${parcel.toCity} drop point in chat before arrival.`,
+    currentLocation: `Awaiting pickup scan in ${parcel.fromCity}`,
+    lastUpdated: new Date().toISOString(),
+    progress: 8,
+    responsibilitySummary: isHighValue
+      ? 'High-value item protocol is active. Keep the parcel sealed, verify the tag at pickup, and complete OTP handoff together.'
+      : 'Traveler is responsible for carrying the sealed parcel on the agreed route and completing handoff only after OTP confirmation.',
+    isHighValue,
+    chat: [
+      {
+        id: createId('message'),
+        actor: 'system',
+        text: `Security group tag created for ${parcel.senderName} and ${travelerName}.`,
+        sentAt: new Date().toISOString(),
+      },
+      {
+        id: createId('message'),
+        actor: 'traveler',
+        text: `I accepted this request for ${parcel.fromCity} to ${parcel.toCity}. I will share the pickup point here shortly.`,
+        sentAt: new Date().toISOString(),
+      },
+    ],
+    checkpoints: [
+      {
+        id: createId('checkpoint'),
+        label: 'Pickup plan',
+        location: parcel.fromCity,
+        etaLabel: 'Waiting for traveler confirmation',
+        status: 'active',
+      },
+      {
+        id: createId('checkpoint'),
+        label: 'In transit',
+        location: `${parcel.fromCity} -> ${parcel.toCity}`,
+        etaLabel: 'Starts after pickup',
+        status: 'upcoming',
+      },
+      {
+        id: createId('checkpoint'),
+        label: 'Drop + OTP handoff',
+        location: parcel.toCity,
+        etaLabel: `ETA on ${parcel.pickupDate}`,
+        status: 'upcoming',
+      },
+    ],
+  };
 }
 
 export interface StoredUser extends AuthUser {
@@ -192,6 +264,14 @@ export async function acceptParcelRequestRecord(id: string, travelerName: string
   };
 
   await notificationsCollection.insertOne(notification);
+
+  const deliveryThreadsCollection = await getDeliveryThreadsCollection();
+  const existingThread = await deliveryThreadsCollection.findOne({ parcelId: parcel.id }, { projection: { _id: 0 } });
+
+  if (!existingThread) {
+    await deliveryThreadsCollection.insertOne(createDeliveryThread({ ...parcel, travelerName: trimmedTravelerName, status: 'matched' }, trimmedTravelerName));
+  }
+
   return updated;
 }
 
@@ -210,6 +290,11 @@ export async function listAssignmentNotifications() {
   return collection.find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
 }
 
+export async function listDeliveryThreads() {
+  const collection = await getDeliveryThreadsCollection();
+  return collection.find({}, { projection: { _id: 0 } }).sort({ lastUpdated: -1 }).toArray();
+}
+
 export async function reviewVerificationCaseRecord(id: string, action: ReviewAction) {
   const collection = await getVerificationCasesCollection();
   const result = await collection.findOneAndUpdate(
@@ -226,11 +311,12 @@ export async function reviewVerificationCaseRecord(id: string, action: ReviewAct
 }
 
 export async function getDashboardSnapshotRecord() {
-  const [parcels, trips, verificationCases, assignmentNotifications] = await Promise.all([
+  const [parcels, trips, verificationCases, assignmentNotifications, deliveryThreads] = await Promise.all([
     listParcels(),
     listTrips(),
     listVerificationCases(),
     listAssignmentNotifications(),
+    listDeliveryThreads(),
   ]);
 
   return {
@@ -238,5 +324,6 @@ export async function getDashboardSnapshotRecord() {
     trips,
     verificationCases,
     assignmentNotifications,
+    deliveryThreads,
   };
 }
