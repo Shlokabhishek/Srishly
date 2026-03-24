@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 import { APP_NAME, ROUTES } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
+import { useMode } from '@/context/ModeContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -17,6 +18,7 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = React.useState(false);
   const location = useLocation();
   const { session, logout } = useAuth();
+  const { mode, setMode } = useMode();
 
   React.useEffect(() => {
     setMenuOpen(false);
@@ -55,6 +57,29 @@ export default function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
+          <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
+            <button
+              type="button"
+              onClick={() => setMode('sender')}
+              className={cn(
+                'rounded-full px-4 py-2 text-sm font-medium transition',
+                mode === 'sender' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+              )}
+            >
+              User mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('traveler')}
+              className={cn(
+                'rounded-full px-4 py-2 text-sm font-medium transition',
+                mode === 'traveler' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+              )}
+            >
+              Traveler mode
+            </button>
+          </div>
+
           {session ? (
             <>
               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white">
@@ -101,6 +126,29 @@ export default function Header() {
       {menuOpen ? (
         <div className="border-t border-white/10 bg-slate-950/95 px-4 py-4 md:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-2">
+            <div className="mb-2 inline-flex rounded-2xl border border-white/10 bg-white/5 p-1">
+              <button
+                type="button"
+                onClick={() => setMode('sender')}
+                className={cn(
+                  'flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition',
+                  mode === 'sender' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+                )}
+              >
+                User mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode('traveler')}
+                className={cn(
+                  'flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition',
+                  mode === 'traveler' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+                )}
+              >
+                Traveler mode
+              </button>
+            </div>
+
             {navItems.map((item) => {
               const active = location.pathname === item.path;
 

@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 import { assertMethod, sendError, sendJson } from './_lib/http';
 import {
+  acceptParcelRequestRecord,
   completeParcelDeliveryRecord,
   createParcelRecord,
   listParcels,
@@ -10,10 +11,11 @@ import {
 import type { ParcelDraftInput, ParcelStatus } from '../src/types';
 
 interface ParcelPatchBody {
-  action?: 'completeDelivery' | 'updateStatus';
+  action?: 'acceptRequest' | 'completeDelivery' | 'updateStatus';
   id?: string;
   otp?: string;
   status?: ParcelStatus;
+  travelerName?: string;
 }
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
@@ -37,6 +39,11 @@ export default async function handler(request: VercelRequest, response: VercelRe
 
     if (body.action === 'completeDelivery') {
       const parcel = await completeParcelDeliveryRecord(body.id, body.otp ?? '');
+      return sendJson(response, 200, parcel);
+    }
+
+    if (body.action === 'acceptRequest') {
+      const parcel = await acceptParcelRequestRecord(body.id, body.travelerName ?? '');
       return sendJson(response, 200, parcel);
     }
 

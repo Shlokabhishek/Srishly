@@ -10,15 +10,15 @@ import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 const howItWorks = [
   {
     title: 'Create a delivery request',
-    description: 'Senders post parcel details, route, pickup expectations, and a traveler reward.',
+    description: 'Users post parcel details, route, weight, size, and the amount they will pay the traveler.',
   },
   {
-    title: 'Match on route and trust',
-    description: 'Travelers browse only the routes they can carry, filtered by capacity and verification status.',
+    title: 'Traveler accepts the route',
+    description: 'Travelers keep an eye on matching routes and accept a request only if they are already going the same way.',
   },
   {
-    title: 'Confirm the handoff',
-    description: 'Escrow protection and OTP confirmation reduce delivery disputes at the final step.',
+    title: 'Notify and coordinate',
+    description: 'The user gets an assigned-traveler notification, then pickup, drop, and live tracking move into secure chat.',
   },
 ];
 
@@ -49,7 +49,7 @@ export default function Home() {
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-300">
                 Srishly helps senders and travelers coordinate city-to-city parcel delivery with validation, escrow-first
-                workflows, and responsive dashboards built for production deployment.
+                workflows, assignment notifications, and responsive dashboards built for production deployment.
               </p>
             </div>
 

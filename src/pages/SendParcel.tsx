@@ -88,6 +88,7 @@ export default function SendParcel() {
   }
 
   const today = new Date().toISOString().split('T')[0];
+  const isHighValueParcel = draft.declaredValue === 'More than Rs 5,000';
 
   return (
     <div className="px-4 py-12 sm:px-6 lg:px-8">
@@ -355,6 +356,20 @@ export default function SendParcel() {
                     </div>
                   </Card>
 
+                  {isHighValueParcel ? (
+                    <Card className="space-y-4 border-amber-400/20 bg-amber-500/10">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-amber-200" />
+                        <h2 className="text-lg font-semibold text-white">Expensive item responsibility</h2>
+                      </div>
+                      <div className="space-y-2 text-sm leading-7 text-slate-200">
+                        <p>The traveler shares pickup and drop points inside secure chat only after the security tag is matched.</p>
+                        <p>High-value parcels should stay sealed in transit, with seal-photo proof at pickup and OTP confirmation at drop.</p>
+                        <p>If contents need extra handling, include it in parcel notes so the traveler can accept responsibility clearly before pickup.</p>
+                      </div>
+                    </Card>
+                  ) : null}
+
                   <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
                     <input
                       checked={draft.termsAccepted}
@@ -404,8 +419,8 @@ export default function SendParcel() {
               <h2 className="text-xl font-semibold text-white">What happens after submission?</h2>
               <ol className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
                 <li>1. Your request is saved to persistent local data for dashboard review.</li>
-                <li>2. Travelers see the route in the marketplace views.</li>
-                <li>3. Final delivery confirmation happens through the dashboard OTP flow.</li>
+                <li>2. Travelers see the route in the marketplace views and confirm pickup or drop details in secure chat.</li>
+                <li>3. Live map tracking and security-group tags stay visible until final OTP handoff.</li>
               </ol>
             </Card>
           </div>

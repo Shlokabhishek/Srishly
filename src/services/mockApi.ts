@@ -1,9 +1,9 @@
-import { seedParcels, seedTrips, seedVerificationCases } from '@/data/mockData';
+import { seedAssignmentNotifications, seedParcels, seedTrips, seedVerificationCases } from '@/data/mockData';
 import { readLocalStorage, writeLocalStorage } from '@/lib/storage';
 import { createId, sleep } from '@/lib/utils';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '@/lib/validation';
 import { STORAGE_KEYS } from '@/constants';
-import type { Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '@/types';
+import type { AssignmentNotification, Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '@/types';
 
 export class AppValidationError extends Error {
   constructor(message: string) {
@@ -20,6 +20,7 @@ interface DashboardSnapshotResponse {
   parcels?: Parcel[];
   trips?: Trip[];
   verificationCases?: VerificationCase[];
+  assignmentNotifications?: AssignmentNotification[];
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api';
@@ -37,6 +38,7 @@ function normalizeDashboardSnapshot(snapshot: DashboardSnapshotResponse) {
     parcels: ensureArray<Parcel>(snapshot.parcels),
     trips: ensureArray<Trip>(snapshot.trips),
     verificationCases: ensureArray<VerificationCase>(snapshot.verificationCases),
+    assignmentNotifications: ensureArray<AssignmentNotification>(snapshot.assignmentNotifications),
   };
 }
 
@@ -71,6 +73,14 @@ function getStoredVerificationCases() {
 
 function setStoredVerificationCases(cases: VerificationCase[]) {
   writeLocalStorage(STORAGE_KEYS.verificationCases, cases);
+}
+
+function getStoredAssignmentNotifications() {
+  return readLocalStorage<AssignmentNotification[]>(STORAGE_KEYS.assignmentNotifications, seedAssignmentNotifications);
+}
+
+function setStoredAssignmentNotifications(notifications: AssignmentNotification[]) {
+  writeLocalStorage(STORAGE_KEYS.assignmentNotifications, notifications);
 }
 
 async function getFallbackParcels() {
@@ -132,6 +142,50 @@ async function completeFallbackParcelDelivery(id: string, otp: string) {
   );
 
   setStoredParcels(nextParcels);
+  await sleep();
+  return nextParcels;
+}
+
+async function acceptFallbackParcelRequest(id: string, travelerName: string) {
+  const trimmedTravelerName = travelerName.trim();
+
+  if (trimmedTravelerName.length < 2) {
+    throw new AppValidationError('Traveler name is required to accept this request.');
+  }
+
+  const parcels = getStoredParcels();
+  const currentParcel = parcels.find((parcel) => parcel.id === id);
+
+  if (!currentParcel) {
+    throw new AppValidationError('Parcel could not be found.');
+  }
+
+  if (currentParcel.status !== 'posted') {
+    throw new AppValidationError('This parcel request is no longer open for acceptance.');
+  }
+
+  const nextParcels = parcels.map((parcel) =>
+    parcel.id === id
+      ? {
+          ...parcel,
+          status: 'matched' as const,
+          travelerName: trimmedTravelerName,
+        }
+      : parcel,
+  );
+
+  setStoredParcels(nextParcels);
+
+  const nextNotification: AssignmentNotification = {
+    id: createId('notification'),
+    parcelId: currentParcel.id,
+    travelerName: trimmedTravelerName,
+    route: `${currentParcel.fromCity} -> ${currentParcel.toCity}`,
+    message: `${trimmedTravelerName} accepted your request for ${currentParcel.fromCity} to ${currentParcel.toCity}.`,
+    createdAt: new Date().toISOString(),
+  };
+
+  setStoredAssignmentNotifications([nextNotification, ...getStoredAssignmentNotifications()]);
   await sleep();
   return nextParcels;
 }
@@ -226,6 +280,27 @@ export async function completeParcelDelivery(id: string, otp: string) {
   }
 }
 
+export async function acceptParcelRequest(id: string, travelerName: string) {
+  try {
+    const updated = await requestApi<Parcel>('/parcels', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        action: 'acceptRequest',
+        id,
+        travelerName,
+      }),
+    });
+
+    return (await getParcels()).map((parcel) => (parcel.id === updated.id ? updated : parcel));
+  } catch (error) {
+    if (shouldUseFallbackApi(error)) {
+      return acceptFallbackParcelRequest(id, travelerName);
+    }
+
+    throw error;
+  }
+}
+
 export async function getTrips() {
   try {
     return await requestApi<Trip[]>('/trips');
@@ -249,6 +324,11 @@ export async function getVerificationCases() {
 
     throw error;
   }
+}
+
+export async function getAssignmentNotifications() {
+  await sleep(200);
+  return getStoredAssignmentNotifications();
 }
 
 export async function reviewVerificationCase(id: string, action: ReviewAction) {
@@ -275,22 +355,25 @@ export async function getDashboardSnapshot(): Promise<{
   parcels: Parcel[];
   trips: Trip[];
   verificationCases: VerificationCase[];
+  assignmentNotifications: AssignmentNotification[];
 }> {
   try {
     const snapshot = await requestApi<DashboardSnapshotResponse>('/dashboard');
     return normalizeDashboardSnapshot(snapshot);
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
-      const [parcels, trips, verificationCases] = await Promise.all([
+      const [parcels, trips, verificationCases, assignmentNotifications] = await Promise.all([
         getFallbackParcels(),
         getTrips(),
         getFallbackVerificationCases(),
+        getAssignmentNotifications(),
       ]);
 
       return {
         parcels,
         trips,
         verificationCases,
+        assignmentNotifications,
       };
     }
 

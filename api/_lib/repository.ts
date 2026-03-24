@@ -2,21 +2,30 @@ import type { Collection } from 'mongodb';
 
 import { getDb } from './mongodb';
 import { ApiError } from './http';
-import { seedParcels, seedTrips, seedVerificationCases } from '../../src/data/mockData';
+import { seedAssignmentNotifications, seedParcels, seedTrips, seedVerificationCases } from '../../src/data/mockData';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '../../src/lib/validation';
 import { createId } from '../../src/lib/utils';
-import type { AuthUser, Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '../../src/types';
+import type {
+  AssignmentNotification,
+  AuthUser,
+  Parcel,
+  ParcelDraftInput,
+  ReviewAction,
+  Trip,
+  VerificationCase,
+} from '../../src/types';
 
 const COLLECTIONS = {
   parcels: 'parcels',
   trips: 'trips',
   verificationCases: 'verificationCases',
+  assignmentNotifications: 'assignmentNotifications',
   users: 'users',
 } as const;
 
 async function seedCollectionIfEmpty<T extends { id: string }>(collection: Collection<T>, seedData: T[]) {
   const count = await collection.countDocuments();
-  if (count === 0) {
+  if (count === 0 && seedData.length > 0) {
     await collection.insertMany(seedData as unknown as Parameters<Collection<T>['insertMany']>[0]);
   }
 }
@@ -39,6 +48,13 @@ export async function getVerificationCasesCollection() {
   const db = await getDb();
   const collection = db.collection<VerificationCase>(COLLECTIONS.verificationCases);
   await seedCollectionIfEmpty(collection, seedVerificationCases);
+  return collection;
+}
+
+export async function getAssignmentNotificationsCollection() {
+  const db = await getDb();
+  const collection = db.collection<AssignmentNotification>(COLLECTIONS.assignmentNotifications);
+  await seedCollectionIfEmpty(collection, seedAssignmentNotifications);
   return collection;
 }
 
@@ -132,6 +148,53 @@ export async function completeParcelDeliveryRecord(id: string, otp: string) {
   return updated;
 }
 
+export async function acceptParcelRequestRecord(id: string, travelerName: string) {
+  const trimmedTravelerName = travelerName.trim();
+
+  if (trimmedTravelerName.length < 2) {
+    throw new ApiError(400, 'Traveler name is required to accept this request.');
+  }
+
+  const parcelsCollection = await getParcelsCollection();
+  const parcel = await parcelsCollection.findOne({ id }, { projection: { _id: 0 } });
+
+  if (!parcel) {
+    throw new ApiError(404, 'Parcel could not be found.');
+  }
+
+  if (parcel.status !== 'posted') {
+    throw new ApiError(400, 'This parcel request is no longer open for acceptance.');
+  }
+
+  const updated = await parcelsCollection.findOneAndUpdate(
+    { id },
+    {
+      $set: {
+        status: 'matched' as const,
+        travelerName: trimmedTravelerName,
+      },
+    },
+    { returnDocument: 'after', projection: { _id: 0 } },
+  );
+
+  if (!updated) {
+    throw new ApiError(404, 'Parcel could not be found.');
+  }
+
+  const notificationsCollection = await getAssignmentNotificationsCollection();
+  const notification: AssignmentNotification = {
+    id: createId('notification'),
+    parcelId: parcel.id,
+    travelerName: trimmedTravelerName,
+    route: `${parcel.fromCity} -> ${parcel.toCity}`,
+    message: `${trimmedTravelerName} accepted your request for ${parcel.fromCity} to ${parcel.toCity}.`,
+    createdAt: new Date().toISOString(),
+  };
+
+  await notificationsCollection.insertOne(notification);
+  return updated;
+}
+
 export async function listTrips() {
   const collection = await getTripsCollection();
   return collection.find({}, { projection: { _id: 0 } }).sort({ date: 1 }).toArray();
@@ -140,6 +203,11 @@ export async function listTrips() {
 export async function listVerificationCases() {
   const collection = await getVerificationCasesCollection();
   return collection.find({}, { projection: { _id: 0 } }).sort({ submittedAt: -1 }).toArray();
+}
+
+export async function listAssignmentNotifications() {
+  const collection = await getAssignmentNotificationsCollection();
+  return collection.find({}, { projection: { _id: 0 } }).sort({ createdAt: -1 }).toArray();
 }
 
 export async function reviewVerificationCaseRecord(id: string, action: ReviewAction) {
@@ -158,15 +226,17 @@ export async function reviewVerificationCaseRecord(id: string, action: ReviewAct
 }
 
 export async function getDashboardSnapshotRecord() {
-  const [parcels, trips, verificationCases] = await Promise.all([
+  const [parcels, trips, verificationCases, assignmentNotifications] = await Promise.all([
     listParcels(),
     listTrips(),
     listVerificationCases(),
+    listAssignmentNotifications(),
   ]);
 
   return {
     parcels,
     trips,
     verificationCases,
+    assignmentNotifications,
   };
 }

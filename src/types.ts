@@ -5,6 +5,8 @@ export type ParcelStatus = 'posted' | 'matched' | 'in_transit' | 'delivered';
 export type TripMode = 'flight' | 'train' | 'bus' | 'car';
 export type ReviewAction = 'approved' | 'rejected';
 export type UserRole = 'sender' | 'traveler';
+export type DeliveryChatActor = 'user' | 'traveler' | 'system';
+export type DeliveryCheckpointStatus = 'completed' | 'active' | 'upcoming';
 
 export interface ParcelDraftInput {
   parcelCategory: string;
@@ -64,6 +66,50 @@ export interface VerificationCase {
   submittedAt: string;
   city: string;
   status: 'pending' | ReviewAction;
+}
+
+export interface DeliveryChatMessage {
+  id: string;
+  actor: DeliveryChatActor;
+  text: string;
+  sentAt: string;
+}
+
+export interface DeliveryCheckpoint {
+  id: string;
+  label: string;
+  location: string;
+  etaLabel: string;
+  status: DeliveryCheckpointStatus;
+}
+
+export interface DeliveryThread {
+  id: string;
+  parcelId: string;
+  routeId: string;
+  travelerName: string;
+  userName: string;
+  fromCity: string;
+  toCity: string;
+  securityGroupTag: string;
+  pickupSummary: string;
+  dropoffSummary: string;
+  currentLocation: string;
+  lastUpdated: string;
+  progress: number;
+  responsibilitySummary: string;
+  isHighValue: boolean;
+  chat: DeliveryChatMessage[];
+  checkpoints: DeliveryCheckpoint[];
+}
+
+export interface AssignmentNotification {
+  id: string;
+  parcelId: string;
+  travelerName: string;
+  route: string;
+  message: string;
+  createdAt: string;
 }
 
 export interface AuthRegisterInput {

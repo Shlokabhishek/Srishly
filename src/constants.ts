@@ -89,4 +89,6 @@ export const STORAGE_KEYS = {
   appMode: 'srishly.app-mode',
   parcels: 'srishly.parcels',
   verificationCases: 'srishly.verification-cases',
+  assignmentNotifications: 'srishly.assignment-notifications',
+  deliveryThreads: 'srishly.delivery-threads',
 } as const;

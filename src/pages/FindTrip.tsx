@@ -10,9 +10,10 @@ import ErrorBanner from '@/components/ui/ErrorBanner';
 import PageLoader from '@/components/ui/PageLoader';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { CITIES } from '@/constants';
+import { useAuth } from '@/context/AuthContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { getParcels } from '@/services/mockApi';
+import { acceptParcelRequest, getParcels } from '@/services/mockApi';
 import type { Parcel } from '@/types';
 
 function getStatusTone(status: Parcel['status']) {
@@ -29,9 +30,13 @@ function getStatusTone(status: Parcel['status']) {
 
 export default function FindTrip() {
   const [searchParams] = useSearchParams();
+  const { session } = useAuth();
   const [parcels, setParcels] = React.useState<Parcel[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
+  const [acceptMessage, setAcceptMessage] = React.useState('');
+  const [acceptError, setAcceptError] = React.useState('');
+  const [acceptingParcelId, setAcceptingParcelId] = React.useState('');
   const [fromCity, setFromCity] = React.useState(searchParams.get('from') ?? '');
   const [toCity, setToCity] = React.useState(searchParams.get('to') ?? '');
   const [query, setQuery] = React.useState('');
@@ -41,7 +46,7 @@ export default function FindTrip() {
 
   useDocumentMeta(
     'Find parcels to carry',
-    'Browse parcel requests by city pair, reward, and weight capacity with loading and empty states.',
+    'Browse parcel requests by city pair, reward, and weight capacity, then accept the ones that match your route.',
   );
 
   React.useEffect(() => {
@@ -84,6 +89,24 @@ export default function FindTrip() {
 
     return matchesFromCity && matchesToCity && matchesQuery && matchesWeight;
   });
+
+  async function handleAccept(parcelId: string) {
+    setAcceptMessage('');
+    setAcceptError('');
+    setAcceptingParcelId(parcelId);
+
+    try {
+      const travelerName = session?.user.name ?? 'Current Traveler';
+      const nextParcels = await acceptParcelRequest(parcelId, travelerName);
+      setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
+      setSelectedParcelId(parcelId);
+      setAcceptMessage(`You accepted ${parcelId}. The user has been notified that ${travelerName} is assigned.`);
+    } catch (submissionError) {
+      setAcceptError(submissionError instanceof Error ? submissionError.message : 'Unable to accept this request right now.');
+    } finally {
+      setAcceptingParcelId('');
+    }
+  }
 
   return (
     <div className="px-4 py-12 sm:px-6 lg:px-8">
@@ -171,11 +194,13 @@ export default function FindTrip() {
                 <p className="text-sm text-slate-400">{filteredParcels.length} matching requests</p>
               </div>
               {selectedParcelId ? (
-                <StatusBadge tone="success">Route interest saved for {selectedParcelId}</StatusBadge>
+                <StatusBadge tone="success">Traveler assigned for {selectedParcelId}</StatusBadge>
               ) : null}
             </div>
 
             {error ? <ErrorBanner message={error} /> : null}
+            {acceptError ? <ErrorBanner message={acceptError} /> : null}
+            {acceptMessage ? <StatusBadge tone="success">{acceptMessage}</StatusBadge> : null}
             {loading ? <PageLoader label="Loading parcel marketplace" /> : null}
 
             {!loading && filteredParcels.length === 0 ? (
@@ -222,26 +247,32 @@ export default function FindTrip() {
                         <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Weight</p>
                         <p className="mt-2 text-sm font-medium text-white">{parcel.weight} kg</p>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Pickup date</p>
-                        <p className="mt-2 text-sm font-medium text-white">{formatDate(parcel.pickupDate)}</p>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Pickup date</p>
+                          <p className="mt-2 text-sm font-medium text-white">{formatDate(parcel.pickupDate)}</p>
+                        </div>
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Size</p>
+                          <p className="mt-2 text-sm font-medium text-white">{parcel.dimensions}</p>
+                        </div>
                       </div>
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Size</p>
-                        <p className="mt-2 text-sm font-medium text-white">{parcel.dimensions}</p>
-                      </div>
-                    </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                      <Button variant="secondary">View details</Button>
-                      <Button onClick={() => setSelectedParcelId(parcel.id)}>
-                        Request to carry
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
+                      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        <Button variant="secondary">View details</Button>
+                        {parcel.status === 'posted' ? (
+                          <Button onClick={() => void handleAccept(parcel.id)} disabled={acceptingParcelId === parcel.id}>
+                            {acceptingParcelId === parcel.id ? 'Accepting...' : 'Accept request'}
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button variant="secondary" onClick={() => setSelectedParcelId(parcel.id)}>
+                            Assigned to {parcel.travelerName ?? 'traveler'}
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
             </div>
           </div>
         </div>
