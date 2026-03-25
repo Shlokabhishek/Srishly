@@ -62,4 +62,29 @@ describe('mockApi shared persistence behavior', () => {
     expect(parcel.id).toMatch(/^parcel-/);
     expect(storedParcels[0]?.id).toBe(parcel.id);
   });
+
+  it('retries transient GET failures before surfacing an error', async () => {
+    vi.stubEnv('DEV', false);
+    vi.stubEnv('VITE_API_BASE_URL', 'https://example.com/api');
+
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: 'temporary outage' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ id: 'parcel-1', status: 'posted' }]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    const { getParcels } = await import('./mockApi');
+    const parcels = await getParcels();
+
+    expect(parcels).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

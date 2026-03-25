@@ -45,6 +45,19 @@ export default function FindTrip() {
   const [selectedParcelId, setSelectedParcelId] = React.useState('');
   const deferredQuery = React.useDeferredValue(query);
 
+  const loadParcels = React.useCallback(async () => {
+    try {
+      setError('');
+      setLoading(true);
+      const nextParcels = await getParcels();
+      setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
+    } catch {
+      setError('We could not load parcel requests right now.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useDocumentMeta(
     'Find parcels to carry',
     'Browse parcel requests by city pair, reward, and weight capacity, then accept the ones that match your route.',
@@ -53,13 +66,15 @@ export default function FindTrip() {
   React.useEffect(() => {
     let active = true;
 
-    async function loadParcels() {
+    async function loadParcelsOnMount() {
       try {
-        setLoading(true);
         const nextParcels = await getParcels();
-        if (active) {
-          setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
+        if (!active) {
+          return;
         }
+
+        setError('');
+        setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
       } catch {
         if (active) {
           setError('We could not load parcel requests right now.');
@@ -71,7 +86,7 @@ export default function FindTrip() {
       }
     }
 
-    void loadParcels();
+    void loadParcelsOnMount();
 
     return () => {
       active = false;
@@ -110,8 +125,12 @@ export default function FindTrip() {
 
     try {
       const travelerName = session.user.name;
-      const nextParcels = await acceptParcelRequest(parcelId, travelerName, handoffDraft.pickupPoint, handoffDraft.dropPoint);
-      setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
+      const updatedParcel = await acceptParcelRequest(parcelId, travelerName, handoffDraft.pickupPoint, handoffDraft.dropPoint);
+      setParcels((current) =>
+        current
+          .map((parcel) => (parcel.id === updatedParcel.id ? updatedParcel : parcel))
+          .filter((item) => item.status !== 'delivered'),
+      );
       setSelectedParcelId(parcelId);
       setAcceptMessage(`You accepted ${parcelId}. The user has been notified that ${travelerName} is assigned.`);
     } catch (submissionError) {
@@ -211,7 +230,14 @@ export default function FindTrip() {
               ) : null}
             </div>
 
-            {error ? <ErrorBanner message={error} /> : null}
+            {error ? (
+              <div className="space-y-3">
+                <ErrorBanner message={error} />
+                <Button variant="secondary" onClick={() => void loadParcels()}>
+                  Retry loading requests
+                </Button>
+              </div>
+            ) : null}
             {acceptError ? <ErrorBanner message={acceptError} /> : null}
             {acceptMessage ? <StatusBadge tone="success">{acceptMessage}</StatusBadge> : null}
             {loading ? <PageLoader label="Loading parcel marketplace" /> : null}

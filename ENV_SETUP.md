@@ -49,6 +49,11 @@ Where to get it:
 - MongoDB Atlas
 - `Database -> Connect -> Drivers`
 
+Important:
+
+- Replace `<password>` or `<db_password>` placeholders with the real database user password before saving.
+- If your password contains special characters like `@`, `#`, `/`, or `:`, URL-encode it before placing it in the URI.
+
 ### `MONGODB_DB_NAME`
 
 Enter the MongoDB database name the app should use.
@@ -106,3 +111,30 @@ VITE_APP_NAME=Srishly
 VITE_SUPPORT_EMAIL=
 VITE_API_BASE_URL=
 ```
+
+## Production Runtime Checklist (Vercel)
+
+Use this checklist if `GET /api/health` or `GET /api/parcels` returns `500`.
+
+1. In Vercel project settings, add these variables to the Production environment:
+	- `MONGODB_URI`
+	- `MONGODB_DB_NAME`
+2. Redeploy after saving variables. Existing deployments do not automatically pick up newly added env values.
+3. In MongoDB Atlas, ensure network access allows Vercel to connect (temporary `0.0.0.0/0` for verification, then tighten).
+4. Verify health endpoint:
+
+```bash
+curl -i https://your-vercel-domain.vercel.app/api/health
+```
+
+Expected: HTTP `200` with JSON where `ok: true`.
+
+If header includes `X-Vercel-Error: FUNCTION_INVOCATION_FAILED`, check Vercel Runtime Logs and fix the serverless function error before retesting.
+
+5. Verify data endpoint:
+
+```bash
+curl -i https://your-vercel-domain.vercel.app/api/parcels
+```
+
+Expected: HTTP `200` with a JSON array.

@@ -28,6 +28,45 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/
 const LOCAL_FALLBACK_API_ENABLED = import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL;
 const SHARED_API_UNAVAILABLE_MESSAGE =
   'Shared parcel data is unavailable right now. Please reconnect the API so requests sync across devices.';
+const RETRY_DELAYS_MS = [250, 700] as const;
+const REQUEST_TIMEOUT_MS = 12000;
+
+function isRetryableMethod(method: string | undefined) {
+  const normalized = (method ?? 'GET').toUpperCase();
+  return normalized === 'GET' || normalized === 'HEAD';
+}
+
+function isRetryableStatus(status: number) {
+  return status === 429 || status >= 500;
+}
+
+function isNetworkError(error: unknown) {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return true;
+  }
+
+  return error instanceof TypeError;
+}
+
+async function waitFor(ms: number) {
+  await new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+async function fetchWithTimeout(url: string, init?: RequestInit) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: init?.signal ?? controller.signal,
+    });
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
 
 function shouldUseFallbackApi(error: unknown) {
   return LOCAL_FALLBACK_API_ENABLED && error instanceof Error;
@@ -64,22 +103,43 @@ function normalizeDashboardSnapshot(snapshot: DashboardSnapshotResponse) {
 }
 
 async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init?.headers ?? {}),
-    },
-    ...init,
-  });
+  const retryableRequest = isRetryableMethod(init?.method);
+  const maxAttempts = retryableRequest ? RETRY_DELAYS_MS.length + 1 : 1;
 
-  if (!response.ok) {
-    const errorBody = (await response.json().catch(() => ({}))) as ApiErrorResponse;
-    const message =
-      errorBody.error || (!LOCAL_FALLBACK_API_ENABLED && response.status >= 404 ? SHARED_API_UNAVAILABLE_MESSAGE : 'Request failed.');
-    throw new AppValidationError(message);
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}${path}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(init?.headers ?? {}),
+        },
+        ...init,
+      });
+
+      if (response.ok) {
+        return (await response.json()) as T;
+      }
+
+      if (attempt < maxAttempts - 1 && isRetryableStatus(response.status)) {
+        await waitFor(RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
+
+      const errorBody = (await response.json().catch(() => ({}))) as ApiErrorResponse;
+      const message =
+        errorBody.error || (!LOCAL_FALLBACK_API_ENABLED && response.status >= 404 ? SHARED_API_UNAVAILABLE_MESSAGE : 'Request failed.');
+      throw new AppValidationError(message);
+    } catch (error) {
+      if (attempt < maxAttempts - 1 && isNetworkError(error)) {
+        await waitFor(RETRY_DELAYS_MS[attempt]);
+        continue;
+      }
+
+      throw error;
+    }
   }
 
-  return (await response.json()) as T;
+  throw new AppValidationError('Request failed.');
 }
 
 function getStoredParcels() {
@@ -398,7 +458,7 @@ export async function completeParcelDelivery(id: string, otp: string) {
 
 export async function acceptParcelRequest(id: string, travelerName: string, pickupPoint: string, dropPoint: string) {
   try {
-    const updated = await requestApi<Parcel>('/parcels', {
+    return await requestApi<Parcel>('/parcels', {
       method: 'PATCH',
       body: JSON.stringify({
         action: 'acceptRequest',
@@ -408,11 +468,16 @@ export async function acceptParcelRequest(id: string, travelerName: string, pick
         dropPoint,
       }),
     });
-
-    return (await getParcels()).map((parcel) => (parcel.id === updated.id ? updated : parcel));
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
-      return acceptFallbackParcelRequest(id, travelerName, pickupPoint, dropPoint);
+      const nextParcels = await acceptFallbackParcelRequest(id, travelerName, pickupPoint, dropPoint);
+      const updated = nextParcels.find((parcel) => parcel.id === id);
+
+      if (!updated) {
+        throw new AppValidationError('Parcel could not be found.');
+      }
+
+      return updated;
     }
 
     throw toAppError(error);

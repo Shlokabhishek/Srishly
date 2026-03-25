@@ -21,6 +21,20 @@ export default function VerificationHub() {
   const [auditLog, setAuditLog] = React.useState<string[]>([]);
   const deferredQuery = React.useDeferredValue(query);
 
+  const loadVerificationCases = React.useCallback(async () => {
+    try {
+      setError('');
+      setLoading(true);
+      const nextCases = await getVerificationCases();
+      setCases(nextCases);
+      setAuditLog(nextCases.map((item) => `Loaded case ${item.id} for ${item.travelerName}`));
+    } catch {
+      setError('We could not load the verification queue right now.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useDocumentMeta(
     'Verification hub',
     'Review pending traveler identity checks with searchable queues and auditable approve or reject actions.',
@@ -29,14 +43,17 @@ export default function VerificationHub() {
   React.useEffect(() => {
     let active = true;
 
-    async function loadVerificationCases() {
+    async function loadVerificationCasesOnMount() {
       try {
         setLoading(true);
         const nextCases = await getVerificationCases();
-        if (active) {
-          setCases(nextCases);
-          setAuditLog(nextCases.map((item) => `Loaded case ${item.id} for ${item.travelerName}`));
+        if (!active) {
+          return;
         }
+
+        setError('');
+        setCases(nextCases);
+        setAuditLog(nextCases.map((item) => `Loaded case ${item.id} for ${item.travelerName}`));
       } catch {
         if (active) {
           setError('We could not load the verification queue right now.');
@@ -48,7 +65,7 @@ export default function VerificationHub() {
       }
     }
 
-    void loadVerificationCases();
+    void loadVerificationCasesOnMount();
 
     return () => {
       active = false;
@@ -116,6 +133,11 @@ export default function VerificationHub() {
               </div>
 
               {error ? <ErrorBanner message={error} /> : null}
+              {error ? (
+                <Button variant="secondary" onClick={() => void loadVerificationCases()}>
+                  Retry loading queue
+                </Button>
+              ) : null}
               {loading ? <PageLoader label="Loading verification queue" /> : null}
 
               {!loading && filteredCases.length === 0 ? (

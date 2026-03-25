@@ -15,10 +15,19 @@ export function sendJson(response: VercelResponse, statusCode: number, body: unk
 
 export function sendError(response: VercelResponse, error: unknown) {
   if (error instanceof ApiError) {
+    if (error.statusCode >= 500) {
+      console.error('[api] handled ApiError', {
+        statusCode: error.statusCode,
+        message: error.message,
+      });
+    }
+
     return sendJson(response, error.statusCode, {
       error: error.message,
     });
   }
+
+  console.error('[api] unhandled error', error);
 
   return sendJson(response, 500, {
     error: 'An unexpected server error occurred.',

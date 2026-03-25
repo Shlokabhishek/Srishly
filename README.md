@@ -108,12 +108,36 @@ npm run test:run
 3. Add the environment variables from the section above.
 4. Deploy.
 
+After deployment, validate runtime immediately:
+
+```bash
+curl -i https://your-vercel-domain.vercel.app/api/health
+curl -i https://your-vercel-domain.vercel.app/api/parcels
+```
+
+If either endpoint returns `500`, open Vercel Runtime Logs for the same deployment and fix the reported serverless error before retrying.
+If the response header contains `X-Vercel-Error: FUNCTION_INVOCATION_FAILED`, this indicates the function crashed at runtime.
+
 The app is configured so:
 
 - Vercel serves the Vite build output from `dist/`
 - `/api/*` routes hit serverless functions
 - all non-API routes rewrite to `index.html` for SPA routing
 - `GET /api/health` reports whether MongoDB is configured and reachable
+- API routes use the explicit Node runtime configured in `vercel.json`
+
+## CI Pipeline
+
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+On each push/PR it runs:
+
+- `npm ci`
+- `npm run typecheck`
+- `npm run test:run`
+- `npm run build`
+
+This blocks regressions before deployment and keeps production builds consistent.
 
 ## API Endpoints
 
@@ -140,6 +164,8 @@ To verify MongoDB after deployment:
 ```bash
 curl https://your-vercel-domain.vercel.app/api/health
 ```
+
+If preview deployment domains return `401`, that is expected when Vercel deployment protection is enabled. Use the production alias/domain for public API checks.
 
 ## Security Notes
 
