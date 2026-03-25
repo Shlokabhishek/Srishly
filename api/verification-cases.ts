@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 import { assertMethod, sendError, sendJson } from './_lib/http';
-import { listVerificationCases, reviewVerificationCaseRecord } from './_lib/repository';
 import type { ReviewAction } from '../src/types';
 
 interface VerificationPatchBody {
@@ -12,9 +11,10 @@ interface VerificationPatchBody {
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   try {
     assertMethod(request.method, ['GET', 'PATCH']);
+    const repository = await import('./_lib/repository');
 
     if (request.method === 'GET') {
-      return sendJson(response, 200, await listVerificationCases());
+      return sendJson(response, 200, await repository.listVerificationCases());
     }
 
     const body = (request.body ?? {}) as VerificationPatchBody;
@@ -23,7 +23,7 @@ export default async function handler(request: VercelRequest, response: VercelRe
       return sendJson(response, 400, { error: 'Verification case id and action are required.' });
     }
 
-    const reviewed = await reviewVerificationCaseRecord(body.id, body.action);
+    const reviewed = await repository.reviewVerificationCaseRecord(body.id, body.action);
     return sendJson(response, 200, reviewed);
   } catch (error) {
     return sendError(response, error);

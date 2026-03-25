@@ -1,13 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 import { assertMethod, sendError, sendJson } from './_lib/http';
-import {
-  acceptParcelRequestRecord,
-  completeParcelDeliveryRecord,
-  createParcelRecord,
-  listParcels,
-  updateParcelStatusRecord,
-} from './_lib/repository';
 import type { ParcelDraftInput, ParcelStatus } from '../src/types';
 
 interface ParcelPatchBody {
@@ -23,13 +16,14 @@ interface ParcelPatchBody {
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   try {
     assertMethod(request.method, ['GET', 'POST', 'PATCH']);
+    const repository = await import('./_lib/repository');
 
     if (request.method === 'GET') {
-      return sendJson(response, 200, await listParcels());
+      return sendJson(response, 200, await repository.listParcels());
     }
 
     if (request.method === 'POST') {
-      const parcel = await createParcelRecord(request.body as ParcelDraftInput);
+      const parcel = await repository.createParcelRecord(request.body as ParcelDraftInput);
       return sendJson(response, 201, parcel);
     }
 
@@ -40,17 +34,17 @@ export default async function handler(request: VercelRequest, response: VercelRe
     }
 
     if (body.action === 'completeDelivery') {
-      const parcel = await completeParcelDeliveryRecord(body.id, body.otp ?? '');
+      const parcel = await repository.completeParcelDeliveryRecord(body.id, body.otp ?? '');
       return sendJson(response, 200, parcel);
     }
 
     if (body.action === 'acceptRequest') {
-      const parcel = await acceptParcelRequestRecord(body.id, body.travelerName ?? '', body.pickupPoint ?? '', body.dropPoint ?? '');
+      const parcel = await repository.acceptParcelRequestRecord(body.id, body.travelerName ?? '', body.pickupPoint ?? '', body.dropPoint ?? '');
       return sendJson(response, 200, parcel);
     }
 
     if (body.action === 'updateStatus' && body.status) {
-      const parcel = await updateParcelStatusRecord(body.id, body.status);
+      const parcel = await repository.updateParcelStatusRecord(body.id, body.status);
       return sendJson(response, 200, parcel);
     }
 

@@ -1,12 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 import { ApiError, assertMethod, sendJson } from './_lib/http';
-import { checkMongoHealth } from './_lib/mongodb';
 
 export default async function handler(request: VercelRequest, response: VercelResponse) {
   try {
     assertMethod(request.method, ['GET']);
 
+    const { checkMongoHealth } = await import('./_lib/mongodb');
     const mongodb = await checkMongoHealth();
     return sendJson(response, 200, {
       ok: true,
