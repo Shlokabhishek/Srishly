@@ -31,6 +31,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     void refreshSession();
 
     const {

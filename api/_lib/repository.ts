@@ -2,9 +2,9 @@ import type { Collection } from 'mongodb';
 
 import { getDb } from './mongodb';
 import { ApiError } from './http';
-import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrips, seedVerificationCases } from '../../src/data/mockData';
-import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '../../src/lib/validation';
-import { createId } from '../../src/lib/utils';
+import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrips, seedVerificationCases } from './seedData';
+import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from './validation';
+import { createId } from './utils';
 import type {
   AssignmentNotification,
   DeliveryThread,

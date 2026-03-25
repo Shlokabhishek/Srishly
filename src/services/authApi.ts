@@ -1,7 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 
 import { isShardaEmail, normalizeEmail } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase, supabaseConfigError } from '@/lib/supabase';
 import type { AuthLoginInput, AuthRegisterInput, AuthRegisterResult, AuthSession } from '@/types';
 
 export class AuthApiError extends Error {
@@ -49,6 +49,14 @@ function mapUser(user: User) {
   };
 }
 
+function getSupabaseClient() {
+  if (!isSupabaseConfigured || !supabase) {
+    throw new AuthApiError(supabaseConfigError || 'Authentication is unavailable right now.');
+  }
+
+  return supabase;
+}
+
 export function mapSupabaseSession(session: Session): AuthSession {
   return {
     user: mapUser(session.user),
@@ -64,8 +72,9 @@ function ensureShardaEmail(email: string) {
 export async function registerUser(input: AuthRegisterInput): Promise<AuthRegisterResult> {
   const email = normalizeEmail(input.email);
   ensureShardaEmail(email);
+  const supabaseClient = getSupabaseClient();
 
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await supabaseClient.auth.signUp({
     email,
     password: input.password,
     options: {
@@ -101,8 +110,9 @@ export async function registerUser(input: AuthRegisterInput): Promise<AuthRegist
 export async function loginUser(input: AuthLoginInput) {
   const email = normalizeEmail(input.email);
   ensureShardaEmail(email);
+  const supabaseClient = getSupabaseClient();
 
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await supabaseClient.auth.signInWithPassword({
     email,
     password: input.password,
   });
@@ -119,10 +129,11 @@ export async function loginUser(input: AuthLoginInput) {
 }
 
 export async function getCurrentSession() {
+  const supabaseClient = getSupabaseClient();
   const {
     data: { session },
     error,
-  } = await supabase.auth.getSession();
+  } = await supabaseClient.auth.getSession();
 
   if (error) {
     throw new AuthApiError(mapAuthErrorMessage(error.message));
@@ -132,7 +143,8 @@ export async function getCurrentSession() {
 }
 
 export async function logoutUser() {
-  const { error } = await supabase.auth.signOut();
+  const supabaseClient = getSupabaseClient();
+  const { error } = await supabaseClient.auth.signOut();
 
   if (error) {
     throw new AuthApiError(mapAuthErrorMessage(error.message));

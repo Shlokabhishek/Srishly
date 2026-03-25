@@ -11,6 +11,7 @@ import { ROUTES } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { isShardaEmail, normalizeName, normalizePhone, normalizeStudentId, parseIdCardText, validateRegistrationInput } from '@/lib/auth';
+import { supabaseConfigError } from '@/lib/supabase';
 import type { ParsedIdCard } from '@/types';
 
 type AuthMode = 'login' | 'register';
@@ -71,9 +72,10 @@ export default function AuthPage() {
   const emailLooksValid = isShardaEmail(normalizedEmail);
   const shouldShowEmailError = emailTouched && normalizedEmail.length > 0 && !emailLooksValid;
   const shouldShowManualEmailHint = mode === 'register' && Boolean(ocrResult && !ocrResult.extractedEmail) && normalizedEmail.length === 0;
-  const isRegisterDisabled =
+  const isSubmitDisabled =
     submitting ||
     ocrLoading ||
+    Boolean(supabaseConfigError) ||
     mode === 'register' &&
       (!emailLooksValid || !password || !phone || !name || !studentIdNumber || !idCardImageName);
 
@@ -225,6 +227,7 @@ export default function AuthPage() {
             </button>
           </div>
 
+          {supabaseConfigError ? <ErrorBanner message={supabaseConfigError} /> : null}
           {error ? <ErrorBanner message={error} /> : null}
           {awaitingVerification ? (
             <div className="space-y-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-100">
@@ -345,7 +348,7 @@ export default function AuthPage() {
               <p className="text-sm text-red-300">Use a Sharda University email such as `@sharda.ac.in` or `@ug.sharda.ac.in`.</p>
             ) : null}
 
-            <Button className="w-full" size="lg" type="submit" disabled={awaitingVerification || isRegisterDisabled}>
+            <Button className="w-full" size="lg" type="submit" disabled={awaitingVerification || isSubmitDisabled}>
               {submitting ? 'Processing...' : awaitingVerification ? 'Waiting for email verification...' : mode === 'register' ? 'Create account' : 'Login'}
             </Button>
           </form>

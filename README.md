@@ -113,9 +113,11 @@ The app is configured so:
 - Vercel serves the Vite build output from `dist/`
 - `/api/*` routes hit serverless functions
 - all non-API routes rewrite to `index.html` for SPA routing
+- `GET /api/health` reports whether MongoDB is configured and reachable
 
 ## API Endpoints
 
+- `GET /api/health`
 - `GET /api/parcels`
 - `POST /api/parcels`
 - `PATCH /api/parcels`
@@ -131,6 +133,12 @@ Run:
 ```bash
 npm run build
 npm run test:run
+```
+
+To verify MongoDB after deployment:
+
+```bash
+curl https://your-vercel-domain.vercel.app/api/health
 ```
 
 ## Security Notes
