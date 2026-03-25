@@ -1,4 +1,13 @@
-import type { VercelResponse } from '@vercel/node';
+export interface ApiRequest {
+  method?: string;
+  body?: unknown;
+}
+
+export interface ApiResponse {
+  status: (statusCode: number) => {
+    json: (body: unknown) => void;
+  };
+}
 
 export class ApiError extends Error {
   public readonly statusCode: number;
@@ -9,11 +18,11 @@ export class ApiError extends Error {
   }
 }
 
-export function sendJson(response: VercelResponse, statusCode: number, body: unknown) {
+export function sendJson(response: ApiResponse, statusCode: number, body: unknown) {
   response.status(statusCode).json(body);
 }
 
-export function sendError(response: VercelResponse, error: unknown) {
+export function sendError(response: ApiResponse, error: unknown) {
   if (error instanceof ApiError) {
     if (error.statusCode >= 500) {
       console.error('[api] handled ApiError', {

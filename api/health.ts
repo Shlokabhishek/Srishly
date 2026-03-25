@@ -1,8 +1,6 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import { ApiError, assertMethod, sendJson, type ApiRequest, type ApiResponse } from './_lib/http';
 
-import { ApiError, assertMethod, sendJson } from './_lib/http';
-
-export default async function handler(request: VercelRequest, response: VercelResponse) {
+export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {
     assertMethod(request.method, ['GET']);
 
