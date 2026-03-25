@@ -413,7 +413,7 @@ export default function SendParcel() {
             <Card>
               <h2 className="text-xl font-semibold text-white">What happens after submission?</h2>
               <ol className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
-                <li>1. Your request is saved to persistent local data for dashboard review.</li>
+                <li>1. Your request is saved to the shared dashboard so it can be reviewed across signed-in devices.</li>
                 <li>2. Travelers see the route in the marketplace views and accept only if they are already going that way.</li>
                 <li>3. The assigned traveler chooses pickup and drop points, then the secure chat and live map take over.</li>
               </ol>

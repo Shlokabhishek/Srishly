@@ -25,9 +25,28 @@ interface DashboardSnapshotResponse {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api';
+const LOCAL_FALLBACK_API_ENABLED = import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL;
+const SHARED_API_UNAVAILABLE_MESSAGE =
+  'Shared parcel data is unavailable right now. Please reconnect the API so requests sync across devices.';
 
 function shouldUseFallbackApi(error: unknown) {
-  return error instanceof Error;
+  return LOCAL_FALLBACK_API_ENABLED && error instanceof Error;
+}
+
+function toAppError(error: unknown) {
+  if (error instanceof AppValidationError) {
+    return error;
+  }
+
+  if (!LOCAL_FALLBACK_API_ENABLED) {
+    return new AppValidationError(SHARED_API_UNAVAILABLE_MESSAGE);
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new AppValidationError('Request failed.');
 }
 
 function ensureArray<T>(value: unknown): T[] {
@@ -55,7 +74,9 @@ async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!response.ok) {
     const errorBody = (await response.json().catch(() => ({}))) as ApiErrorResponse;
-    throw new AppValidationError(errorBody.error || 'Request failed.');
+    const message =
+      errorBody.error || (!LOCAL_FALLBACK_API_ENABLED && response.status >= 404 ? SHARED_API_UNAVAILABLE_MESSAGE : 'Request failed.');
+    throw new AppValidationError(message);
   }
 
   return (await response.json()) as T;
@@ -308,7 +329,7 @@ export async function getParcels() {
       return getFallbackParcels();
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -323,7 +344,7 @@ export async function createParcel(draft: ParcelDraftInput) {
       return createFallbackParcel(draft);
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -350,7 +371,7 @@ export async function updateParcelStatus(id: string, status: Parcel['status']) {
       return nextParcels;
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -371,7 +392,7 @@ export async function completeParcelDelivery(id: string, otp: string) {
       return completeFallbackParcelDelivery(id, otp);
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -394,7 +415,7 @@ export async function acceptParcelRequest(id: string, travelerName: string, pick
       return acceptFallbackParcelRequest(id, travelerName, pickupPoint, dropPoint);
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -407,7 +428,7 @@ export async function getTrips() {
       return seedTrips;
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -419,7 +440,7 @@ export async function getVerificationCases() {
       return getFallbackVerificationCases();
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -449,7 +470,7 @@ export async function reviewVerificationCase(id: string, action: ReviewAction) {
       return reviewFallbackVerificationCase(id, action);
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
 
@@ -482,6 +503,6 @@ export async function getDashboardSnapshot(): Promise<{
       };
     }
 
-    throw error;
+    throw toAppError(error);
   }
 }
