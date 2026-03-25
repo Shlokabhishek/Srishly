@@ -1,4 +1,4 @@
-import { sendJson, type ApiRequest, type ApiResponse } from './lib/http';
+import { sendJson, type ApiRequest, type ApiResponse } from './lib/apiHttp';
 
 export default async function handler(_request: ApiRequest, response: ApiResponse) {
   try {

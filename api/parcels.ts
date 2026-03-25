@@ -1,4 +1,4 @@
-import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './lib/http';
+import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './lib/apiHttp';
 import type { ParcelDraftInput, ParcelStatus } from '../src/types';
 
 interface ParcelPatchBody {

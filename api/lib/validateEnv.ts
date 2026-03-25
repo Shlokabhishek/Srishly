@@ -1,4 +1,4 @@
-import { createApiError } from './http';
+import { createApiError } from './apiHttp';
 
 const REQUIRED_ENV_VARS = ['MONGODB_URI'] as const;
 

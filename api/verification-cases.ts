@@ -1,4 +1,4 @@
-import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './lib/http';
+import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './lib/apiHttp';
 import type { ReviewAction } from '../src/types';
 
 interface VerificationPatchBody {

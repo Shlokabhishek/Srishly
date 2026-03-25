@@ -1,5 +1,5 @@
 import { getDb } from './mongodb';
-import { createApiError } from './http';
+import { createApiError } from './apiHttp';
 import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrips, seedVerificationCases } from './seedData';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from './validation';
 import { createId } from './utils';

@@ -1,4 +1,4 @@
-import { assertMethod, isApiError, sendJson, type ApiRequest, type ApiResponse } from './lib/http';
+import { assertMethod, isApiError, sendJson, type ApiRequest, type ApiResponse } from './lib/apiHttp';
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {

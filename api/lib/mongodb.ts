@@ -1,4 +1,4 @@
-import { createApiError } from './http';
+import { createApiError } from './apiHttp';
 import { validateEnvironment } from './validateEnv';
 
 interface MongoCollectionLike<T extends { id: string }> {
