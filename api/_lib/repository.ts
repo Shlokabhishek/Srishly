@@ -1,5 +1,3 @@
-import type { Collection } from 'mongodb';
-
 import { getDb } from './mongodb';
 import { ApiError } from './http';
 import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrips, seedVerificationCases } from './seedData';
@@ -25,10 +23,15 @@ const COLLECTIONS = {
   users: 'users',
 } as const;
 
-async function seedCollectionIfEmpty<T extends { id: string }>(collection: Collection<T>, seedData: T[]) {
+interface SeedableCollection<T extends { id: string }> {
+  countDocuments: () => Promise<number>;
+  insertMany: (docs: T[]) => Promise<unknown>;
+}
+
+async function seedCollectionIfEmpty<T extends { id: string }>(collection: SeedableCollection<T>, seedData: T[]) {
   const count = await collection.countDocuments();
   if (count === 0 && seedData.length > 0) {
-    await collection.insertMany(seedData as unknown as Parameters<Collection<T>['insertMany']>[0]);
+    await collection.insertMany(seedData);
   }
 }
 
