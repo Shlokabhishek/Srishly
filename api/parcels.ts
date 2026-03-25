@@ -1,4 +1,4 @@
-import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './_lib/http';
+import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './lib/http';
 import type { ParcelDraftInput, ParcelStatus } from '../src/types';
 
 interface ParcelPatchBody {
@@ -14,7 +14,7 @@ interface ParcelPatchBody {
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {
     assertMethod(request.method, ['GET', 'POST', 'PATCH']);
-    const repository = await import('./_lib/repository');
+    const repository = await import('./lib/repository');
 
     if (request.method === 'GET') {
       return sendJson(response, 200, await repository.listParcels());

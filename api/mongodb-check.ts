@@ -1,8 +1,8 @@
-import { sendJson, type ApiRequest, type ApiResponse } from './_lib/http';
+import { sendJson, type ApiRequest, type ApiResponse } from './lib/http';
 
 export default async function handler(_request: ApiRequest, response: ApiResponse) {
   try {
-    await import('./_lib/mongodb');
+    await import('./lib/mongodb');
     return sendJson(response, 200, {
       ok: true,
       source: 'mongodb-check',

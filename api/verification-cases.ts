@@ -1,4 +1,4 @@
-import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './_lib/http';
+import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './lib/http';
 import type { ReviewAction } from '../src/types';
 
 interface VerificationPatchBody {
@@ -9,7 +9,7 @@ interface VerificationPatchBody {
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {
     assertMethod(request.method, ['GET', 'PATCH']);
-    const repository = await import('./_lib/repository');
+    const repository = await import('./lib/repository');
 
     if (request.method === 'GET') {
       return sendJson(response, 200, await repository.listVerificationCases());

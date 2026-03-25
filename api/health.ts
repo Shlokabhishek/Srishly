@@ -1,10 +1,10 @@
-import { assertMethod, isApiError, sendJson, type ApiRequest, type ApiResponse } from './_lib/http';
+import { assertMethod, isApiError, sendJson, type ApiRequest, type ApiResponse } from './lib/http';
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {
     assertMethod(request.method, ['GET']);
 
-    const { checkMongoHealth } = await import('./_lib/mongodb');
+    const { checkMongoHealth } = await import('./lib/mongodb');
     const mongodb = await checkMongoHealth();
     return sendJson(response, 200, {
       ok: true,
