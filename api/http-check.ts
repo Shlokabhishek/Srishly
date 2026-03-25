@@ -1,8 +1,11 @@
-import { assertMethod, sendJson, type ApiRequest, type ApiResponse } from './lib/apiHttp';
+export default function handler(request: { method?: string }, response: { status: (code: number) => { json: (body: unknown) => void } }) {
+  if (request.method !== 'GET') {
+    return response.status(405).json({
+      error: 'Method not allowed. Expected one of: GET.',
+    });
+  }
 
-export default function handler(request: ApiRequest, response: ApiResponse) {
-  assertMethod(request.method, ['GET']);
-  return sendJson(response, 200, {
+  return response.status(200).json({
     ok: true,
     source: 'http-check',
   });

@@ -1,11 +1,38 @@
-import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from './lib/apiHttp';
+type ApiRequest = {
+  method?: string;
+};
 
-export default async function handler(request: ApiRequest, response: ApiResponse) {
-  try {
-    assertMethod(request.method, ['GET']);
-    const { getDashboardSnapshotRecord } = await import('./lib/repository');
-    return sendJson(response, 200, await getDashboardSnapshotRecord());
-  } catch (error) {
-    return sendError(response, error);
+type ApiResponse = {
+  status: (statusCode: number) => {
+    json: (body: unknown) => void;
+  };
+};
+
+export default function handler(request: ApiRequest, response: ApiResponse) {
+  if (request.method !== 'GET') {
+    return response.status(405).json({ error: 'Method not allowed. Expected one of: GET.' });
   }
+
+  return response.status(200).json({
+    parcels: [
+      {
+        id: 'parcel-001',
+        status: 'posted',
+      },
+    ],
+    trips: [
+      {
+        id: 'trip-001',
+        status: 'active',
+      },
+    ],
+    verificationCases: [
+      {
+        id: 'verify-001',
+        status: 'pending',
+      },
+    ],
+    assignmentNotifications: [],
+    deliveryThreads: [],
+  });
 }
