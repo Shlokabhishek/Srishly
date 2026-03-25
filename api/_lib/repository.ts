@@ -1,5 +1,5 @@
 import { getDb } from './mongodb';
-import { ApiError } from './http';
+import { createApiError } from './http';
 import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrips, seedVerificationCases } from './seedData';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from './validation';
 import { createId } from './utils';
@@ -150,7 +150,7 @@ export async function listParcels() {
 export async function createParcelRecord(draft: ParcelDraftInput) {
   const errors = validateParcelDraft(draft);
   if (Object.keys(errors).length > 0) {
-    throw new ApiError(400, 'The parcel form contains invalid values.');
+    throw createApiError(400, 'The parcel form contains invalid values.');
   }
 
   const sanitized = sanitizeParcelDraft(draft);
@@ -188,7 +188,7 @@ export async function updateParcelStatusRecord(id: string, status: Parcel['statu
   );
 
   if (!result) {
-    throw new ApiError(404, 'Parcel could not be found.');
+    throw createApiError(404, 'Parcel could not be found.');
   }
 
   return result;
@@ -196,18 +196,18 @@ export async function updateParcelStatusRecord(id: string, status: Parcel['statu
 
 export async function completeParcelDeliveryRecord(id: string, otp: string) {
   if (!validateOtp(otp)) {
-    throw new ApiError(400, 'Enter a valid 4-digit delivery code.');
+    throw createApiError(400, 'Enter a valid 4-digit delivery code.');
   }
 
   const collection = await getParcelsCollection();
   const parcel = await collection.findOne({ id }, { projection: { _id: 0 } });
 
   if (!parcel) {
-    throw new ApiError(404, 'Parcel could not be found.');
+    throw createApiError(404, 'Parcel could not be found.');
   }
 
   if (parcel.otpCode !== otp) {
-    throw new ApiError(400, 'The delivery code does not match this parcel.');
+    throw createApiError(400, 'The delivery code does not match this parcel.');
   }
 
   const updated = await collection.findOneAndUpdate(
@@ -217,7 +217,7 @@ export async function completeParcelDeliveryRecord(id: string, otp: string) {
   );
 
   if (!updated) {
-    throw new ApiError(404, 'Parcel could not be found.');
+    throw createApiError(404, 'Parcel could not be found.');
   }
 
   return updated;
@@ -229,22 +229,22 @@ export async function acceptParcelRequestRecord(id: string, travelerName: string
   const trimmedDropPoint = dropPoint.trim();
 
   if (trimmedTravelerName.length < 2) {
-    throw new ApiError(400, 'Traveler name is required to accept this request.');
+    throw createApiError(400, 'Traveler name is required to accept this request.');
   }
 
   if (trimmedPickupPoint.length < 8 || trimmedDropPoint.length < 8) {
-    throw new ApiError(400, 'Traveler must choose pickup and drop points before accepting the request.');
+    throw createApiError(400, 'Traveler must choose pickup and drop points before accepting the request.');
   }
 
   const parcelsCollection = await getParcelsCollection();
   const parcel = await parcelsCollection.findOne({ id }, { projection: { _id: 0 } });
 
   if (!parcel) {
-    throw new ApiError(404, 'Parcel could not be found.');
+    throw createApiError(404, 'Parcel could not be found.');
   }
 
   if (parcel.status !== 'posted') {
-    throw new ApiError(400, 'This parcel request is no longer open for acceptance.');
+    throw createApiError(400, 'This parcel request is no longer open for acceptance.');
   }
 
   const updated = await parcelsCollection.findOneAndUpdate(
@@ -259,7 +259,7 @@ export async function acceptParcelRequestRecord(id: string, travelerName: string
   );
 
   if (!updated) {
-    throw new ApiError(404, 'Parcel could not be found.');
+    throw createApiError(404, 'Parcel could not be found.');
   }
 
   const notificationsCollection = await getAssignmentNotificationsCollection();
@@ -320,7 +320,7 @@ export async function reviewVerificationCaseRecord(id: string, action: ReviewAct
   );
 
   if (!result) {
-    throw new ApiError(404, 'Verification case could not be found.');
+    throw createApiError(404, 'Verification case could not be found.');
   }
 
   return result;

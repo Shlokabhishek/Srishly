@@ -1,4 +1,4 @@
-import { ApiError } from './http';
+import { createApiError } from './http';
 import { validateEnvironment } from './validateEnv';
 
 interface MongoCollectionLike<T extends { id: string }> {
@@ -45,15 +45,15 @@ function getMongoConfig() {
   const dbName = process.env.MONGODB_DB_NAME?.trim() || 'srishly';
 
   if (!uri) {
-    throw new ApiError(500, 'MongoDB is not configured. Add MONGODB_URI to your Vercel environment variables.');
+    throw createApiError(500, 'MongoDB is not configured. Add MONGODB_URI to your Vercel environment variables.');
   }
 
   if (uri.includes('<db_password>')) {
-    throw new ApiError(500, 'MongoDB URI still contains <db_password>. Replace it with your real database user password.');
+    throw createApiError(500, 'MongoDB URI still contains <db_password>. Replace it with your real database user password.');
   }
 
   if (!uri.startsWith('mongodb://') && !uri.startsWith('mongodb+srv://')) {
-    throw new ApiError(500, 'MongoDB URI format is invalid. It must start with mongodb:// or mongodb+srv://');
+    throw createApiError(500, 'MongoDB URI format is invalid. It must start with mongodb:// or mongodb+srv://');
   }
 
   return { uri, dbName };
@@ -77,7 +77,7 @@ async function getMongoClient() {
     console.error('[api] MongoDB driver import failed', {
       error: error instanceof Error ? error.message : String(error),
     });
-    throw new ApiError(500, 'MongoDB driver failed to load in the serverless runtime.');
+    throw createApiError(500, 'MongoDB driver failed to load in the serverless runtime.');
   }
 
   if (!global.__srishlyMongoClientPromise__ || global.__srishlyMongoClientUri__ !== uri) {
@@ -95,7 +95,7 @@ async function getMongoClient() {
       console.error('[api] MongoDB connection failed', {
         error: error instanceof Error ? error.message : String(error),
       });
-      throw new ApiError(503, 'MongoDB connection failed. Check MONGODB_URI, Atlas IP access rules, and network access.');
+      throw createApiError(503, 'MongoDB connection failed. Check MONGODB_URI, Atlas IP access rules, and network access.');
     });
   }
 

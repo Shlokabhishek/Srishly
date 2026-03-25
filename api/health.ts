@@ -1,4 +1,4 @@
-import { ApiError, assertMethod, sendJson, type ApiRequest, type ApiResponse } from './_lib/http';
+import { assertMethod, isApiError, sendJson, type ApiRequest, type ApiResponse } from './_lib/http';
 
 export default async function handler(request: ApiRequest, response: ApiResponse) {
   try {
@@ -14,8 +14,8 @@ export default async function handler(request: ApiRequest, response: ApiResponse
       },
     });
   } catch (error) {
-    const statusCode = error instanceof ApiError ? error.statusCode : 503;
-    const message = error instanceof ApiError ? error.message : 'MongoDB connection failed.';
+    const statusCode = isApiError(error) ? error.statusCode : 503;
+    const message = isApiError(error) ? error.message : 'MongoDB connection failed.';
 
     return sendJson(response, statusCode, {
       ok: false,
