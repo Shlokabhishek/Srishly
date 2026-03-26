@@ -7,18 +7,28 @@ export function formatCurrency(value: number) {
 }
 
 export function formatDate(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Invalid date';
+  }
+
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(value));
+  }).format(parsed);
 }
 
 export function formatDateTime(value: string) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Invalid date';
+  }
+
   return new Intl.DateTimeFormat('en-IN', {
     day: 'numeric',
     month: 'short',
     hour: 'numeric',
     minute: '2-digit',
-  }).format(new Date(value));
+  }).format(parsed);
 }
