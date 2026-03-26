@@ -20,5 +20,5 @@
     },
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src", "api", "server", "vite.config.ts"]
+  "include": ["src", "api", "vite.config.ts"]
 }
