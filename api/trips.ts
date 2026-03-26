@@ -1,30 +1,11 @@
-type ApiRequest = {
-  method?: string;
-};
+import { assertMethod, sendError, sendJson, type ApiRequest, type ApiResponse } from '../server/apiHttp';
+import { listTrips } from '../server/repository';
 
-type ApiResponse = {
-  status: (statusCode: number) => {
-    json: (body: unknown) => void;
-  };
-};
-
-export default function handler(request: ApiRequest, response: ApiResponse) {
-  if (request.method !== 'GET') {
-    return response.status(405).json({ error: 'Method not allowed. Expected one of: GET.' });
+export default async function handler(request: ApiRequest, response: ApiResponse) {
+  try {
+    assertMethod(request.method, ['GET']);
+    return sendJson(response, 200, await listTrips());
+  } catch (error) {
+    return sendError(response, error);
   }
-
-  return response.status(200).json([
-    {
-      id: 'trip-001',
-      travelerName: 'Amit R.',
-      fromCity: 'Delhi',
-      toCity: 'Lucknow',
-      date: '2026-03-28',
-      mode: 'train',
-      availableSpace: 10,
-      status: 'active',
-      isVerified: true,
-      trustScore: 92,
-    },
-  ]);
 }
