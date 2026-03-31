@@ -10,6 +10,7 @@ import FormField from '@/components/ui/FormField';
 import { CATEGORIES, CITIES, DECLARED_VALUES, DIMENSIONS, INITIAL_PARCEL_DRAFT, ROUTES } from '@/constants';
 import { useMode } from '@/context/ModeContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
+import { formatCurrency } from '@/lib/format';
 import { isStepValid, validateParcelDraft } from '@/lib/validation';
 import { createParcel } from '@/services/mockApi';
 import type { FieldErrors, ParcelDraftInput } from '@/types';
@@ -70,10 +71,8 @@ export default function SendParcel() {
         <div className="mx-auto max-w-3xl">
           <Card highlighted className="space-y-5">
             <p className="text-sm uppercase tracking-[0.25em] text-amber-200">User mode only</p>
-            <h1 className="text-3xl font-semibold text-white">Switch to User mode to send a parcel.</h1>
-            <p className="text-sm leading-7 text-slate-300">
-              Posting parcels belongs to the sender flow. Traveler mode is reserved for browsing and carrying requests.
-            </p>
+            <h1 className="text-3xl font-semibold text-white">Send parcels in User mode.</h1>
+            <p className="text-sm text-slate-300">Traveler mode is only for carrying orders.</p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button onClick={() => setMode('sender')}>Switch to User mode</Button>
               <Button variant="secondary" onClick={() => navigate(ROUTES.dashboard)}>
@@ -114,6 +113,21 @@ export default function SendParcel() {
 
   const today = new Date().toISOString().split('T')[0];
   const isHighValueParcel = draft.declaredValue === 'More than Rs 5,000';
+  const weight = Number(draft.weight || 0);
+  const routeCharge = draft.fromCity && draft.toCity && draft.fromCity !== draft.toCity ? 120 : 0;
+  const weightCharge = weight > 0 ? Math.round(weight * 55) : 0;
+  const valueCharge =
+    draft.declaredValue === 'More than Rs 5,000'
+      ? 220
+      : draft.declaredValue === 'Rs 2,000 - Rs 5,000'
+        ? 140
+        : draft.declaredValue === 'Rs 500 - Rs 2,000'
+          ? 70
+          : 0;
+  const suggestedReward = Math.max(150, Math.round((120 + routeCharge + weightCharge + valueCharge) / 50) * 50);
+  const rewardValue = Number(draft.reward || 0);
+  const rewardProgress = rewardValue ? Math.min(100, Math.round((rewardValue / suggestedReward) * 100)) : 0;
+  const rewardLabel = !rewardValue ? 'Add reward' : rewardValue < suggestedReward ? 'Low' : rewardValue <= suggestedReward + 150 ? 'Fair' : 'High';
 
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
@@ -123,9 +137,7 @@ export default function SendParcel() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-1 h-5 w-5 text-red-300" />
-                <p className="text-sm leading-7 text-red-100">
-                  By using Srishly, you agree not to send cash, jewelry, or original government documents. All parcels may be subject to voluntary inspection by the traveler.
-                </p>
+                <p className="text-sm text-red-100">Do not send cash, jewelry, or original government documents. The traveler may inspect the parcel.</p>
               </div>
               <Button variant="ghost" onClick={() => setShowDisclaimer(false)}>
                 Dismiss
@@ -136,11 +148,8 @@ export default function SendParcel() {
 
         <div className="space-y-4">
           <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Sender workflow</p>
-          <h1 className="text-4xl font-semibold text-white">Post a delivery request with validation built in.</h1>
-          <p className="max-w-3xl text-sm leading-7 text-slate-300">
-            Senders now submit the parcel, route, schedule, and reward only. The traveler chooses the exact pickup and drop
-            points after accepting the request.
-          </p>
+          <h1 className="text-4xl font-semibold text-white">Send a parcel.</h1>
+          <p className="max-w-3xl text-sm text-slate-300">Add parcel details, route, receiver, and reward.</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
@@ -333,7 +342,7 @@ export default function SendParcel() {
                     error={errors.pickupDate}
                     htmlFor="pickupDate"
                     label="Preferred travel date"
-                    description="This is the date travelers use to decide whether they are already going on the same route."
+                    description="Travelers use this to match their trip."
                   >
                     <input
                       id="pickupDate"
@@ -349,7 +358,7 @@ export default function SendParcel() {
                     error={errors.pickupLocation}
                     htmlFor="pickupLocation"
                     label="Pickup location"
-                    description="Exact handoff point where the traveler should collect the parcel."
+                    description="Where the traveler should collect the parcel."
                   >
                     <input
                       id="pickupLocation"
@@ -363,12 +372,12 @@ export default function SendParcel() {
                   <Card className="space-y-4 border-white/10 bg-white/5">
                     <div className="flex items-center gap-3">
                       <MapPinned className="h-5 w-5 text-amber-300" />
-                      <h2 className="text-lg font-semibold text-white">Traveler confirms final handoff points</h2>
+                      <h2 className="text-lg font-semibold text-white">How it works</h2>
                     </div>
-                    <div className="space-y-2 text-sm leading-7 text-slate-300">
-                      <p>Sender submits preferred pickup location and receiver address.</p>
-                      <p>After acceptance, traveler confirms exact meeting points inside the secure order thread.</p>
-                      <p>Once parcel is picked, OTP is generated and visible to sender, traveler, and receiver.</p>
+                    <div className="space-y-2 text-sm text-slate-300">
+                      <p>1. You post the parcel and route.</p>
+                      <p>2. The traveler accepts and confirms meeting points.</p>
+                      <p>3. OTP appears after pickup.</p>
                     </div>
                   </Card>
                 </motion.div>
@@ -377,7 +386,7 @@ export default function SendParcel() {
               {step === 3 ? (
                 <motion.div initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }} className="space-y-5">
                   <FormField
-                    description="Rewards are shown to travelers and held until the final delivery confirmation step."
+                    description="Shown to travelers and released after delivery."
                     error={errors.reward}
                     htmlFor="reward"
                     label="Traveler reward (Rs)"
@@ -393,6 +402,30 @@ export default function SendParcel() {
                       className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
                     />
                   </FormField>
+
+                  <Card className="space-y-4 border-amber-400/20 bg-amber-500/10">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.2em] text-amber-100">Cost meter</p>
+                        <h2 className="mt-1 text-lg font-semibold text-white">Suggested reward {formatCurrency(suggestedReward)}</h2>
+                      </div>
+                      <StatusPill label={rewardLabel} />
+                    </div>
+                    <div className="h-3 overflow-hidden rounded-full bg-slate-950/60">
+                      <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${rewardProgress}%` }} />
+                    </div>
+                    <div className="grid gap-3 text-sm text-slate-200 sm:grid-cols-3">
+                      <p><span className="text-amber-100">Route:</span> {formatCurrency(routeCharge)}</p>
+                      <p><span className="text-amber-100">Weight:</span> {formatCurrency(weightCharge)}</p>
+                      <p><span className="text-amber-100">Value:</span> {formatCurrency(valueCharge)}</p>
+                    </div>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-slate-200">Use this as a quick guide.</p>
+                      <Button type="button" variant="secondary" onClick={() => updateField('reward', String(suggestedReward))}>
+                        Use {formatCurrency(suggestedReward)}
+                      </Button>
+                    </div>
+                  </Card>
 
                   <div className="grid gap-5 md:grid-cols-2">
                     <FormField error={errors.receiverName} htmlFor="receiverName" label="Receiver name">
@@ -430,7 +463,7 @@ export default function SendParcel() {
                   <Card className="space-y-4 bg-white/5">
                     <div className="flex items-center gap-3">
                       <Package2 className="h-5 w-5 text-amber-300" />
-                      <h2 className="text-lg font-semibold text-white">Submission summary</h2>
+                      <h2 className="text-lg font-semibold text-white">Summary</h2>
                     </div>
                     <div className="grid gap-3 text-sm text-slate-300 sm:grid-cols-2">
                       <p><span className="text-slate-500">Route:</span> {draft.fromCity || 'Origin'} -&gt; {draft.toCity || 'Destination'}</p>
@@ -446,12 +479,12 @@ export default function SendParcel() {
                     <Card className="space-y-4 border-amber-400/20 bg-amber-500/10">
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="h-5 w-5 text-amber-200" />
-                        <h2 className="text-lg font-semibold text-white">Expensive item responsibility</h2>
+                        <h2 className="text-lg font-semibold text-white">High-value parcel</h2>
                       </div>
-                      <div className="space-y-2 text-sm leading-7 text-slate-200">
-                        <p>The traveler shares pickup and drop points inside secure chat only after the security tag is matched.</p>
-                        <p>High-value parcels should stay sealed in transit, with seal-photo proof at pickup and OTP confirmation at drop.</p>
-                        <p>If contents need extra handling, include it in parcel notes so the traveler can accept responsibility clearly before pickup.</p>
+                      <div className="space-y-2 text-sm text-slate-200">
+                        <p>Keep it sealed.</p>
+                        <p>Add handling notes.</p>
+                        <p>OTP will be checked at delivery.</p>
                       </div>
                     </Card>
                   ) : null}
@@ -464,7 +497,7 @@ export default function SendParcel() {
                       className="mt-1 h-4 w-4 rounded border-white/20 bg-slate-950 text-amber-400"
                     />
                     <span>
-                      I confirm the parcel details are accurate, the contents are lawful, and the reward should remain in escrow until delivery is confirmed.
+                      I confirm the details are correct, the parcel is lawful, and the reward stays locked until delivery.
                     </span>
                   </label>
                   {errors.termsAccepted ? <p className="text-xs text-red-300">{errors.termsAccepted}</p> : null}
@@ -493,20 +526,20 @@ export default function SendParcel() {
 
           <div className="space-y-6">
             <Card highlighted>
-              <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Why this is safer</p>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
-                <li>Validated city pairs reduce broken matches and inconsistent route data.</li>
-                <li>Travelers choose the final pickup and drop points only after route acceptance.</li>
-                <li>Submission errors are surfaced clearly before anything is stored.</li>
+              <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Why it helps</p>
+              <ul className="mt-4 space-y-3 text-sm text-slate-300">
+                <li>Clean route matching</li>
+                <li>Receiver details saved with the order</li>
+                <li>Pickup OTP after handoff</li>
               </ul>
             </Card>
 
             <Card>
-              <h2 className="text-xl font-semibold text-white">What happens after submission?</h2>
-              <ol className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
-                <li>1. Your request is saved to the shared dashboard so it can be reviewed across signed-in devices.</li>
-                <li>2. Travelers see the route in the marketplace views and accept only if they are already going that way.</li>
-                <li>3. The assigned traveler chooses pickup and drop points, then the secure chat and live map take over.</li>
+              <h2 className="text-xl font-semibold text-white">After you post</h2>
+              <ol className="mt-4 space-y-3 text-sm text-slate-300">
+                <li>1. Travelers see the route.</li>
+                <li>2. One traveler accepts.</li>
+                <li>3. You track everything in Your parcels.</li>
               </ol>
             </Card>
           </div>
@@ -514,4 +547,8 @@ export default function SendParcel() {
       </div>
     </div>
   );
+}
+
+function StatusPill({ label }: { label: string }) {
+  return <span className="rounded-full border border-amber-300/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-amber-100">{label}</span>;
 }

@@ -35,6 +35,7 @@ export const CITIES = [
 export const CATEGORIES = ['Documents', 'Electronics', 'Clothing', 'Footwear', 'Books', 'Others'] as const;
 export const DIMENSIONS = ['Small', 'Medium', 'Large'] as const;
 export const DECLARED_VALUES = ['Up to Rs 500', 'Rs 500 - Rs 2,000', 'Rs 2,000 - Rs 5,000', 'More than Rs 5,000'] as const;
+export const TRAVELER_CANCELLATION_FINE = 150;
 
 export const INITIAL_PARCEL_DRAFT: ParcelDraftInput = {
   parcelCategory: '',

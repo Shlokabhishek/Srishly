@@ -2,7 +2,7 @@ import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrip
 import { readLocalStorage, writeLocalStorage } from '@/lib/storage';
 import { createId, sleep } from '@/lib/utils';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '@/lib/validation';
-import { STORAGE_KEYS } from '@/constants';
+import { STORAGE_KEYS, TRAVELER_CANCELLATION_FINE } from '@/constants';
 import type { AssignmentNotification, DeliveryThread, Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '@/types';
 
 export class AppValidationError extends Error {
@@ -150,6 +150,22 @@ function getStoredDeliveryThreads() {
 
 function setStoredDeliveryThreads(threads: DeliveryThread[]) {
   writeLocalStorage(STORAGE_KEYS.deliveryThreads, threads);
+}
+
+function clearTravelerAssignment(parcel: Parcel): Parcel {
+  return {
+    ...parcel,
+    status: 'requested',
+    travelerName: undefined,
+    travelerPhone: undefined,
+    travelerVerificationStatus: undefined,
+    travelerRating: undefined,
+    orderStartedAt: undefined,
+    pickedAt: undefined,
+    inTransitAt: undefined,
+    deliveredAt: undefined,
+    otpCode: undefined,
+  };
 }
 
 function createOtpCode() {
@@ -308,6 +324,60 @@ function createDeliveryThread(parcel: Parcel, travelerName: string, pickupPoint:
   };
 }
 
+function recordAcceptanceSideEffects(parcel: Parcel, travelerName: string, pickupPoint: string, dropPoint: string) {
+  const senderNotification: AssignmentNotification = {
+    id: createId('notification'),
+    parcelId: parcel.id,
+    travelerName,
+    audience: 'sender',
+    route: `${parcel.fromCity} -> ${parcel.toCity}`,
+    message: `${travelerName} accepted your parcel request.`,
+    createdAt: new Date().toISOString(),
+  };
+
+  const travelerNotification: AssignmentNotification = {
+    id: createId('notification'),
+    parcelId: parcel.id,
+    travelerName,
+    audience: 'traveler',
+    route: `${parcel.fromCity} -> ${parcel.toCity}`,
+    message: `Order ${parcel.id} is now active.`,
+    createdAt: new Date().toISOString(),
+  };
+
+  setStoredAssignmentNotifications([senderNotification, travelerNotification, ...getStoredAssignmentNotifications()]);
+
+  const currentThreads = getStoredDeliveryThreads();
+  if (!currentThreads.some((thread) => thread.parcelId === parcel.id)) {
+    setStoredDeliveryThreads([createDeliveryThread(parcel, travelerName, pickupPoint, dropPoint), ...currentThreads]);
+  }
+}
+
+function recordCancellationSideEffects(parcel: Parcel, travelerName: string) {
+  const senderNotification: AssignmentNotification = {
+    id: createId('notification'),
+    parcelId: parcel.id,
+    travelerName,
+    audience: 'sender',
+    route: `${parcel.fromCity} -> ${parcel.toCity}`,
+    message: `${travelerName} canceled this order. Fine: Rs ${TRAVELER_CANCELLATION_FINE}.`,
+    createdAt: new Date().toISOString(),
+  };
+
+  const travelerNotification: AssignmentNotification = {
+    id: createId('notification'),
+    parcelId: parcel.id,
+    travelerName,
+    audience: 'traveler',
+    route: `${parcel.fromCity} -> ${parcel.toCity}`,
+    message: `Order canceled. Fine noted: Rs ${TRAVELER_CANCELLATION_FINE}.`,
+    createdAt: new Date().toISOString(),
+  };
+
+  setStoredAssignmentNotifications([senderNotification, travelerNotification, ...getStoredAssignmentNotifications()]);
+  setStoredDeliveryThreads(getStoredDeliveryThreads().filter((thread) => thread.parcelId !== parcel.id));
+}
+
 async function getFallbackParcels() {
   await sleep();
   return getStoredParcels();
@@ -428,51 +498,40 @@ async function acceptFallbackParcelRequest(id: string, travelerName: string, pic
   );
 
   setStoredParcels(nextParcels);
+  recordAcceptanceSideEffects(
+    {
+      ...currentParcel,
+      travelerName: trimmedTravelerName,
+      travelerPhone: '98******32',
+      travelerVerificationStatus: 'aadhaar_verified',
+      travelerRating: 4.7,
+      status: 'accepted',
+      orderStartedAt: new Date().toISOString(),
+    },
+    trimmedTravelerName,
+    trimmedPickupPoint,
+    trimmedDropPoint,
+  );
 
-  const nextNotification: AssignmentNotification = {
-    id: createId('notification'),
-    parcelId: currentParcel.id,
-    travelerName: trimmedTravelerName,
-    audience: 'sender',
-    route: `${currentParcel.fromCity} -> ${currentParcel.toCity}`,
-    message: `${trimmedTravelerName} accepted your request for ${currentParcel.fromCity} to ${currentParcel.toCity}.`,
-    createdAt: new Date().toISOString(),
-  };
+  await sleep();
+  return nextParcels;
+}
 
-  const travelerNotification: AssignmentNotification = {
-    id: createId('notification'),
-    parcelId: currentParcel.id,
-    travelerName: trimmedTravelerName,
-    audience: 'traveler',
-    route: `${currentParcel.fromCity} -> ${currentParcel.toCity}`,
-    message: `You accepted ${currentParcel.id}. Sender ${currentParcel.senderName} is now in active order tracking.`,
-    createdAt: new Date().toISOString(),
-  };
+async function cancelFallbackParcelAssignment(id: string) {
+  const parcels = getStoredParcels();
+  const currentParcel = parcels.find((parcel) => parcel.id === id);
 
-  setStoredAssignmentNotifications([nextNotification, travelerNotification, ...getStoredAssignmentNotifications()]);
-  const currentThreads = getStoredDeliveryThreads();
-  const hasThread = currentThreads.some((thread) => thread.parcelId === currentParcel.id);
-
-  if (!hasThread) {
-    setStoredDeliveryThreads([
-      createDeliveryThread(
-        {
-          ...currentParcel,
-          travelerName: trimmedTravelerName,
-          travelerPhone: '98******32',
-          travelerVerificationStatus: 'aadhaar_verified',
-          travelerRating: 4.7,
-          status: 'accepted',
-          orderStartedAt: new Date().toISOString(),
-        },
-        trimmedTravelerName,
-        trimmedPickupPoint,
-        trimmedDropPoint,
-      ),
-      ...currentThreads,
-    ]);
+  if (!currentParcel) {
+    throw new AppValidationError('Parcel could not be found.');
   }
 
+  if (currentParcel.status !== 'accepted' || !currentParcel.travelerName) {
+    throw new AppValidationError('Only accepted orders can be canceled.');
+  }
+
+  const nextParcels = parcels.map((parcel) => (parcel.id === id ? clearTravelerAssignment(parcel) : parcel));
+  setStoredParcels(nextParcels);
+  recordCancellationSideEffects(currentParcel, currentParcel.travelerName);
   await sleep();
   return nextParcels;
 }
@@ -530,6 +589,8 @@ export async function updateParcelStatus(id: string, status: Parcel['status']) {
       }),
     });
 
+    syncDeliveryThreadsWithParcel(updated);
+
     return (await getParcels()).map((parcel) => (parcel.id === updated.id ? updated : parcel));
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
@@ -574,6 +635,30 @@ export async function updateParcelStatus(id: string, status: Parcel['status']) {
   }
 }
 
+export async function cancelParcelAssignment(parcel: Parcel) {
+  try {
+    const updated = await requestApi<Parcel>('/parcels', {
+      method: 'PATCH',
+      body: JSON.stringify({
+        action: 'cancelRequest',
+        id: parcel.id,
+      }),
+    });
+
+    if (parcel.travelerName) {
+      recordCancellationSideEffects(parcel, parcel.travelerName);
+    }
+
+    return (await getParcels()).map((item) => (item.id === updated.id ? updated : item));
+  } catch (error) {
+    if (shouldUseFallbackApi(error)) {
+      return cancelFallbackParcelAssignment(parcel.id);
+    }
+
+    throw toAppError(error);
+  }
+}
+
 export async function completeParcelDelivery(id: string, otp: string) {
   try {
     const updated = await requestApi<Parcel>('/parcels', {
@@ -584,6 +669,8 @@ export async function completeParcelDelivery(id: string, otp: string) {
         otp,
       }),
     });
+
+    syncDeliveryThreadsWithParcel(updated);
 
     return (await getParcels()).map((parcel) => (parcel.id === updated.id ? updated : parcel));
   } catch (error) {
@@ -597,7 +684,7 @@ export async function completeParcelDelivery(id: string, otp: string) {
 
 export async function acceptParcelRequest(id: string, travelerName: string, pickupPoint: string, dropPoint: string) {
   try {
-    return await requestApi<Parcel>('/parcels', {
+    const updated = await requestApi<Parcel>('/parcels', {
       method: 'PATCH',
       body: JSON.stringify({
         action: 'acceptRequest',
@@ -607,6 +694,21 @@ export async function acceptParcelRequest(id: string, travelerName: string, pick
         dropPoint,
       }),
     });
+
+    recordAcceptanceSideEffects(
+      {
+        ...updated,
+        travelerName,
+        travelerPhone: updated.travelerPhone ?? '98******32',
+        travelerVerificationStatus: updated.travelerVerificationStatus ?? 'aadhaar_verified',
+        travelerRating: updated.travelerRating ?? 4.7,
+      },
+      travelerName,
+      pickupPoint.trim(),
+      dropPoint.trim(),
+    );
+
+    return updated;
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
       const nextParcels = await acceptFallbackParcelRequest(id, travelerName, pickupPoint, dropPoint);

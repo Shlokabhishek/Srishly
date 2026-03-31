@@ -45,7 +45,7 @@ type ParcelRecord = {
 };
 
 type ParcelPatchBody = {
-  action?: 'acceptRequest' | 'completeDelivery' | 'updateStatus';
+  action?: 'acceptRequest' | 'cancelRequest' | 'completeDelivery' | 'updateStatus';
   id?: string;
   otp?: string;
   status?: ParcelStatus;
@@ -169,6 +169,24 @@ export default function handler(request: ApiRequest, response: ApiResponse) {
     target.travelerVerificationStatus = 'aadhaar_verified';
     target.travelerRating = 4.7;
     target.orderStartedAt = new Date().toISOString();
+    return response.status(200).json(target);
+  }
+
+  if (body.action === 'cancelRequest') {
+    if (target.status !== 'accepted') {
+      return response.status(400).json({ error: 'Only accepted orders can be canceled.' });
+    }
+
+    target.status = 'requested';
+    target.travelerName = undefined;
+    target.travelerPhone = undefined;
+    target.travelerVerificationStatus = undefined;
+    target.travelerRating = undefined;
+    target.orderStartedAt = undefined;
+    target.pickedAt = undefined;
+    target.inTransitAt = undefined;
+    target.deliveredAt = undefined;
+    target.otpCode = undefined;
     return response.status(200).json(target);
   }
 

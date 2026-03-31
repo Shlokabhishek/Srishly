@@ -9,11 +9,11 @@ import EmptyState from '@/components/ui/EmptyState';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import PageLoader from '@/components/ui/PageLoader';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { ROUTES } from '@/constants';
+import { ROUTES, TRAVELER_CANCELLATION_FINE } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
 import { useMode } from '@/context/ModeContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
-import { formatCurrency, formatDate, formatDateTime, maskPhone } from '@/lib/format';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import {
   getOrderTimeline,
   getParcelStatusLabel,
@@ -23,7 +23,7 @@ import {
   isApprovedVerification,
   isViewerVerified,
 } from '@/lib/orderFlow';
-import { completeParcelDelivery, getDashboardSnapshot, updateParcelStatus } from '@/services/mockApi';
+import { completeParcelDelivery, cancelParcelAssignment, getDashboardSnapshot, updateParcelStatus } from '@/services/mockApi';
 import type { AssignmentNotification, DeliveryChatMessage, DeliveryThread, Parcel, Trip, VerificationCase } from '@/types';
 
 function getCheckpointTone(status: DeliveryThread['checkpoints'][number]['status']) {
@@ -73,12 +73,12 @@ export default function Dashboard() {
 
   useDocumentMeta(
     'Dashboard',
-    'Manage active orders, notifications, trust metadata, and OTP delivery completion from one dashboard.',
+    'Track live orders, view contacts, and finish delivery with OTP from one dashboard.',
   );
 
   const activeOrders = parcels.filter((parcel) => parcel.status !== 'delivered');
   const deliveredOrders = parcels.filter((parcel) => parcel.status === 'delivered');
-  const travelerOrders = activeOrders.filter((parcel) => parcel.travelerName);
+  const travelerOrders = activeOrders.filter((parcel) => (session ? parcel.travelerName === session.user.name : false));
   const activeThread = threads.find((thread) => thread.id === selectedThreadId) ?? threads[0];
   const visibleNotifications = notifications.filter((notification) => (notification.audience ? notification.audience === mode : true));
   const averageReward = parcels.length
@@ -109,16 +109,26 @@ export default function Dashboard() {
     }
   }
 
+  async function cancel(parcel: Parcel) {
+    try {
+      setActionError('');
+      setMessage('');
+      await cancelParcelAssignment(parcel);
+      setMessage(`Order ${parcel.id} canceled. Fine Rs ${TRAVELER_CANCELLATION_FINE}.`);
+      await loadDashboard();
+    } catch (submissionError) {
+      setActionError(submissionError instanceof Error ? submissionError.message : 'Unable to cancel this order.');
+    }
+  }
+
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
             <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Operations dashboard</p>
-            <h1 className="text-4xl font-semibold text-white">Secure order tracking, trust visibility, and OTP delivery completion.</h1>
-            <p className="max-w-3xl text-sm leading-7 text-slate-300">
-              Requests move from created to accepted, picked, in transit, and delivered, while sender and traveler dashboards stay aligned.
-            </p>
+            <h1 className="text-4xl font-semibold text-white">Track orders and finish delivery with OTP.</h1>
+            <p className="max-w-3xl text-sm text-slate-300">Live status, contacts, and chat in one place.</p>
             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
               {session ? <span>{session.user.name}</span> : null}
               <StatusBadge tone={viewerVerified ? 'success' : 'warning'}>
@@ -174,18 +184,14 @@ export default function Dashboard() {
               <Card className="space-y-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h2 className="text-2xl font-semibold text-white">{mode === 'sender' ? 'Your parcels' : 'Traveler order console'}</h2>
-                    <p className="text-sm text-slate-400">
-                      {mode === 'sender'
-                        ? 'See live parcel status first, then review your previous delivered parcels below.'
-                        : 'Advance accepted orders through pickup, transit, and OTP-secured delivery.'}
-                    </p>
+                    <h2 className="text-2xl font-semibold text-white">{mode === 'sender' ? 'Your parcels' : 'Accepted orders'}</h2>
+                    <p className="text-sm text-slate-400">{mode === 'sender' ? 'Live orders first. Delivered orders below.' : 'Pickup, track, deliver, or cancel here.'}</p>
                   </div>
                   <Link
                     to={mode === 'sender' ? ROUTES.sendParcel : ROUTES.findTrip}
                     className="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"
                   >
-                    {mode === 'sender' ? 'New request' : 'Browse requests'}
+                    {mode === 'sender' ? 'Send parcel' : 'Browse requests'}
                   </Link>
                 </div>
 
@@ -218,20 +224,28 @@ export default function Dashboard() {
 
                         <div className="mt-5 grid gap-5 xl:grid-cols-2">
                           <Card className="border-white/10 bg-slate-950/40">
-                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Traveler details</p>
-                            <div className="mt-4 space-y-2 text-sm text-slate-300">
-                              <p><span className="text-slate-500">Name:</span> {parcel.travelerName ?? 'Awaiting assignment'}</p>
-                              <p><span className="text-slate-500">Phone:</span> {parcel.travelerPhone ? (viewerVerified ? parcel.travelerPhone : maskPhone(parcel.travelerPhone)) : 'Visible after acceptance'}</p>
-                              <p><span className="text-slate-500">Verification:</span> {parcel.travelerVerificationStatus ? getVerificationLabel(parcel.travelerVerificationStatus) : 'Pending'}</p>
-                              <p><span className="text-slate-500">Rating:</span> {parcel.travelerRating ? `${parcel.travelerRating.toFixed(1)}/5` : 'Not rated yet'}</p>
-                            </div>
+                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{mode === 'sender' ? 'Traveler' : 'Sender'}</p>
+                            {mode === 'sender' ? (
+                              <div className="mt-4 space-y-2 text-sm text-slate-300">
+                                <p><span className="text-slate-500">Name:</span> {parcel.travelerName ?? 'Awaiting assignment'}</p>
+                                <p><span className="text-slate-500">Phone:</span> {parcel.travelerPhone ?? 'After acceptance'}</p>
+                                <p><span className="text-slate-500">Verification:</span> {parcel.travelerVerificationStatus ? getVerificationLabel(parcel.travelerVerificationStatus) : 'Pending'}</p>
+                                <p><span className="text-slate-500">Rating:</span> {parcel.travelerRating ? `${parcel.travelerRating.toFixed(1)}/5` : 'Not rated yet'}</p>
+                              </div>
+                            ) : (
+                              <div className="mt-4 space-y-2 text-sm text-slate-300">
+                                <p><span className="text-slate-500">Name:</span> {parcel.senderName}</p>
+                                <p><span className="text-slate-500">Phone:</span> {parcel.senderPhone}</p>
+                                <p><span className="text-slate-500">Pickup:</span> {parcel.pickupLocation}</p>
+                              </div>
+                            )}
                           </Card>
 
                           <Card className="border-white/10 bg-slate-950/40">
-                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Receiver details</p>
+                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Receiver</p>
                             <div className="mt-4 space-y-2 text-sm text-slate-300">
                               <p><span className="text-slate-500">Name:</span> {parcel.receiverName}</p>
-                              <p><span className="text-slate-500">Phone:</span> {viewerVerified ? parcel.receiverPhone : maskPhone(parcel.receiverPhone)}</p>
+                              <p><span className="text-slate-500">Phone:</span> {parcel.receiverPhone}</p>
                               <p><span className="text-slate-500">Address:</span> {parcel.receiverAddress}</p>
                             </div>
                           </Card>
@@ -248,7 +262,12 @@ export default function Dashboard() {
 
                         {mode === 'traveler' && parcel.travelerName ? (
                           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                            {parcel.status === 'accepted' ? <Button onClick={() => void advance(parcel.id, 'picked')}>Mark picked up + generate OTP</Button> : null}
+                            {parcel.status === 'accepted' ? <Button onClick={() => void advance(parcel.id, 'picked')}>Mark picked up</Button> : null}
+                            {parcel.status === 'accepted' ? (
+                              <Button variant="secondary" onClick={() => void cancel(parcel)}>
+                                Cancel order
+                              </Button>
+                            ) : null}
                             {parcel.status === 'picked' ? <Button onClick={() => void advance(parcel.id, 'in_transit')}>Start live tracking</Button> : null}
                             {parcel.status === 'in_transit' ? (
                               <>
@@ -269,6 +288,9 @@ export default function Dashboard() {
                             ) : null}
                           </div>
                         ) : null}
+                        {mode === 'traveler' && parcel.status === 'accepted' ? (
+                          <p className="mt-3 text-sm text-amber-200">Cancel after accept: fine Rs {TRAVELER_CANCELLATION_FINE}</p>
+                        ) : null}
                       </div>
                     ))}
                   </div>
@@ -278,7 +300,7 @@ export default function Dashboard() {
                   <div className="space-y-4 border-t border-white/10 pt-6">
                     <div>
                       <h3 className="text-xl font-semibold text-white">Previous parcels</h3>
-                      <p className="text-sm text-slate-400">Delivered parcel history with completed routes and handoff records.</p>
+                      <p className="text-sm text-slate-400">Your delivered parcel history.</p>
                     </div>
 
                     {deliveredOrders.length === 0 ? (

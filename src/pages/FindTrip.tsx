@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ArrowRight, Package2, Search, ShieldCheck, SlidersHorizontal, Star, Truck } from 'lucide-react';
+import { ArrowRight, Package2, Search, ShieldCheck, SlidersHorizontal, Truck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -9,13 +9,13 @@ import EmptyState from '@/components/ui/EmptyState';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import PageLoader from '@/components/ui/PageLoader';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { CITIES, ROUTES } from '@/constants';
+import { CITIES, ROUTES, TRAVELER_CANCELLATION_FINE } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
 import { useMode } from '@/context/ModeContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
-import { formatCurrency, formatDate, maskPhone } from '@/lib/format';
-import { getOrderTimeline, getParcelStatusLabel, getParcelStatusTone, getVerificationLabel, isViewerVerified } from '@/lib/orderFlow';
-import { acceptParcelRequest, getParcels, updateParcelStatus } from '@/services/mockApi';
+import { formatCurrency, formatDate } from '@/lib/format';
+import { getOrderTimeline, getParcelStatusLabel, getParcelStatusTone, isViewerVerified } from '@/lib/orderFlow';
+import { acceptParcelRequest, cancelParcelAssignment, getParcels, updateParcelStatus } from '@/services/mockApi';
 import type { Parcel } from '@/types';
 
 export default function FindTrip() {
@@ -52,7 +52,7 @@ export default function FindTrip() {
 
   useDocumentMeta(
     'Find parcels to carry',
-    'Browse parcel requests by city pair, reward, and weight capacity, then move accepted requests into pickup and transit workflows.',
+    'Browse parcel requests, accept a matching order, and move it through pickup, transit, and OTP delivery.',
   );
 
   React.useEffect(() => {
@@ -71,28 +71,9 @@ export default function FindTrip() {
 
     return matchesFromCity && matchesToCity && matchesQuery && matchesWeight;
   });
-
-  if (mode !== 'traveler') {
-    return (
-      <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
-        <div className="mx-auto max-w-3xl">
-          <Card highlighted className="space-y-5">
-            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Traveler mode only</p>
-            <h1 className="text-3xl font-semibold text-white">Switch to Traveler mode to find parcels to carry.</h1>
-            <p className="text-sm leading-7 text-slate-300">
-              Browsing parcel requests belongs to the traveler flow. User mode is reserved for posting and tracking your own parcels.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button onClick={() => setMode('traveler')}>Switch to Traveler mode</Button>
-              <Button variant="secondary" onClick={() => navigate(ROUTES.dashboard)}>
-                Open traveler dashboard
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  const visibleParcels = filteredParcels.filter(
+    (parcel) => parcel.status === 'requested' || (session ? parcel.travelerName === session.user.name : false),
+  );
 
   async function handleAccept(parcelId: string) {
     setAcceptMessage('');
@@ -110,17 +91,16 @@ export default function FindTrip() {
 
     const handoffDraft = handoffDrafts[parcelId] ?? { pickupPoint: '', dropPoint: '' };
     if (handoffDraft.pickupPoint.trim().length < 8 || handoffDraft.dropPoint.trim().length < 8) {
-      setAcceptError('Choose both pickup and drop points before accepting the request.');
+      setAcceptError('Add pickup and drop points before accepting.');
       return;
     }
 
     setActingParcelId(parcelId);
 
     try {
-      const travelerName = session.user.name;
-      const updatedParcel = await acceptParcelRequest(parcelId, travelerName, handoffDraft.pickupPoint, handoffDraft.dropPoint);
+      const updatedParcel = await acceptParcelRequest(parcelId, session.user.name, handoffDraft.pickupPoint, handoffDraft.dropPoint);
       setParcels((current) => current.map((parcel) => (parcel.id === updatedParcel.id ? updatedParcel : parcel)));
-      setAcceptMessage(`You accepted ${parcelId}. Sender and traveler notifications are now active.`);
+      setAcceptMessage(`Order ${parcelId} accepted.`);
     } catch (submissionError) {
       setAcceptError(submissionError instanceof Error ? submissionError.message : 'Unable to accept this request right now.');
     } finally {
@@ -136,11 +116,7 @@ export default function FindTrip() {
     try {
       const nextParcels = await updateParcelStatus(parcel.id, nextStatus);
       setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
-      setAcceptMessage(
-        nextStatus === 'picked'
-          ? `Pickup confirmed for ${parcel.id}. OTP is now visible to sender, traveler, and receiver.`
-          : `Live transit tracking started for ${parcel.id}.`,
-      );
+      setAcceptMessage(nextStatus === 'picked' ? `Pickup marked for ${parcel.id}.` : `Live tracking started for ${parcel.id}.`);
     } catch (submissionError) {
       setAcceptError(submissionError instanceof Error ? submissionError.message : 'Unable to update this order.');
     } finally {
@@ -148,15 +124,49 @@ export default function FindTrip() {
     }
   }
 
+  async function handleCancel(parcel: Parcel) {
+    setAcceptMessage('');
+    setAcceptError('');
+    setActingParcelId(parcel.id);
+
+    try {
+      const nextParcels = await cancelParcelAssignment(parcel);
+      setParcels(nextParcels.filter((item) => item.status !== 'delivered'));
+      setAcceptMessage(`Order ${parcel.id} canceled. Fine Rs ${TRAVELER_CANCELLATION_FINE}.`);
+    } catch (submissionError) {
+      setAcceptError(submissionError instanceof Error ? submissionError.message : 'Unable to cancel this order.');
+    } finally {
+      setActingParcelId('');
+    }
+  }
+
+  if (mode !== 'traveler') {
+    return (
+      <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto max-w-3xl">
+          <Card highlighted className="space-y-5">
+            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Traveler mode only</p>
+            <h1 className="text-3xl font-semibold text-white">Find parcels in Traveler mode.</h1>
+            <p className="text-sm text-slate-300">User mode is for sending and tracking your parcel.</p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button variant="secondary" onClick={() => navigate(ROUTES.sendParcel)}>
+                Open send parcel
+              </Button>
+              <Button onClick={() => setMode('traveler')}>Switch to Traveler mode</Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="space-y-4">
           <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Traveler marketplace</p>
-          <h1 className="text-4xl font-semibold text-white">Accept route-matching requests and move them into delivery operations.</h1>
-          <p className="max-w-3xl text-sm leading-7 text-slate-300">
-            Open requests become active orders after acceptance, pickup generates the OTP, and transit starts live tracking.
-          </p>
+          <h1 className="text-4xl font-semibold text-white">Find a parcel to carry.</h1>
+          <p className="max-w-3xl text-sm text-slate-300">Accept a route match, unlock contacts, and move the order forward.</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[0.34fr_0.66fr]">
@@ -230,11 +240,9 @@ export default function FindTrip() {
               <div className="flex items-center gap-3">
                 <ShieldCheck className="h-5 w-5 text-amber-300" />
                 <div>
-                  <p className="text-sm font-semibold text-white">{viewerVerified ? 'Traveler verified' : 'Verification required'}</p>
+                  <p className="text-sm font-semibold text-white">{viewerVerified ? 'Traveler verified' : 'Verification needed'}</p>
                   <p className="text-sm text-slate-400">
-                    {viewerVerified
-                      ? 'You can accept requests and manage active delivery stages.'
-                      : 'Login plus verification is required before you can accept a parcel.'}
+                    {viewerVerified ? 'You can accept and manage orders.' : 'Verify your account before accepting.'}
                   </p>
                 </div>
               </div>
@@ -244,17 +252,17 @@ export default function FindTrip() {
           <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-2xl font-semibold text-white">Active parcel flow</h2>
-                <p className="text-sm text-slate-400">{filteredParcels.length} matching requests</p>
+                <h2 className="text-2xl font-semibold text-white">Open requests</h2>
+                <p className="text-sm text-slate-400">{visibleParcels.length} match your filters</p>
               </div>
-              <StatusBadge tone="warning">{filteredParcels.filter((parcel) => parcel.status === 'requested').length} open requests</StatusBadge>
+              <StatusBadge tone="warning">{visibleParcels.filter((parcel) => parcel.status === 'requested').length} open</StatusBadge>
             </div>
 
             {error ? (
               <div className="space-y-3">
                 <ErrorBanner message={error} />
                 <Button variant="secondary" onClick={() => void loadParcels()}>
-                  Retry loading requests
+                  Retry
                 </Button>
               </div>
             ) : null}
@@ -262,164 +270,182 @@ export default function FindTrip() {
             {acceptMessage ? <StatusBadge tone="success">{acceptMessage}</StatusBadge> : null}
             {loading ? <PageLoader label="Loading parcel marketplace" /> : null}
 
-            {!loading && filteredParcels.length === 0 ? (
+            {!loading && visibleParcels.length === 0 ? (
               <EmptyState
                 icon={Package2}
-                title="No parcel requests match these filters"
-                description="Adjust the city pair or weight slider to reveal more route opportunities."
+                title="No matching parcels"
+                description="Try another route or increase the weight limit."
               />
             ) : null}
 
             <div className="grid gap-5">
-              {filteredParcels.map((parcel, index) => (
-                <motion.div
-                  key={parcel.id}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.04 }}
-                >
-                  <Card className="space-y-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                      <div className="space-y-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                          <StatusBadge tone={getParcelStatusTone(parcel.status)}>{getParcelStatusLabel(parcel.status)}</StatusBadge>
-                          <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Request ID {parcel.id}</span>
+              {visibleParcels.map((parcel, index) => {
+                const receiverUnlocked = Boolean(session && parcel.travelerName === session.user.name);
+
+                return (
+                  <motion.div
+                    key={parcel.id}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.04 }}
+                  >
+                    <Card className="space-y-5">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <StatusBadge tone={getParcelStatusTone(parcel.status)}>{getParcelStatusLabel(parcel.status)}</StatusBadge>
+                            <span className="text-xs uppercase tracking-[0.2em] text-slate-500">Order {parcel.id}</span>
+                          </div>
+                          <h3 className="text-2xl font-semibold text-white">{parcel.parcelCategory}</h3>
+                          <p className="text-sm text-slate-300">{parcel.description}</p>
                         </div>
-                        <h3 className="text-2xl font-semibold text-white">{parcel.parcelCategory}</h3>
-                        <p className="text-sm leading-7 text-slate-300">{parcel.description}</p>
+
+                        <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-right">
+                          <p className="text-xs uppercase tracking-[0.2em] text-amber-100">Reward</p>
+                          <p className="mt-1 text-2xl font-semibold text-white">{formatCurrency(parcel.reward)}</p>
+                        </div>
                       </div>
 
-                      <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-right">
-                        <p className="text-xs uppercase tracking-[0.2em] text-amber-100">Reward</p>
-                        <p className="mt-1 text-2xl font-semibold text-white">{formatCurrency(parcel.reward)}</p>
+                      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        <MetricPanel label="Route" value={`${parcel.fromCity} -> ${parcel.toCity}`} />
+                        <MetricPanel label="Weight" value={`${parcel.weight} kg`} />
+                        <MetricPanel label="Pickup date" value={formatDate(parcel.pickupDate)} />
+                        <MetricPanel label="Pickup point" value={parcel.pickupLocation} />
                       </div>
-                    </div>
 
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                      <MetricPanel label="Route" value={`${parcel.fromCity} -> ${parcel.toCity}`} />
-                      <MetricPanel label="Weight" value={`${parcel.weight} kg`} />
-                      <MetricPanel label="Pickup date" value={formatDate(parcel.pickupDate)} />
-                      <MetricPanel label="Pickup point" value={parcel.pickupLocation} />
-                    </div>
+                      <div className="grid gap-5 xl:grid-cols-[0.58fr_0.42fr]">
+                        <Card className="border-white/10 bg-white/5">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Status</p>
+                          <div className="mt-4 grid gap-3 sm:grid-cols-5">
+                            {getOrderTimeline(parcel).map((stage) => (
+                              <div key={stage.key} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+                                <p className="text-sm font-semibold text-white">{stage.label}</p>
+                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{stage.state}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
 
-                    <div className="grid gap-5 xl:grid-cols-[0.58fr_0.42fr]">
-                      <Card className="border-white/10 bg-white/5">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Delivery status timeline</p>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-5">
-                          {getOrderTimeline(parcel).map((stage) => (
-                            <div key={stage.key} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-                              <p className="text-sm font-semibold text-white">{stage.label}</p>
-                              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{stage.state}</p>
+                        <Card className="border-white/10 bg-white/5">
+                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">{receiverUnlocked ? 'Receiver' : 'Receiver locked'}</p>
+                          {receiverUnlocked ? (
+                            <div className="mt-4 space-y-2 text-sm text-slate-300">
+                              <p><span className="text-slate-500">Name:</span> {parcel.receiverName}</p>
+                              <p><span className="text-slate-500">Phone:</span> {parcel.receiverPhone}</p>
+                              <p><span className="text-slate-500">Address:</span> {parcel.receiverAddress}</p>
+                              <p><span className="text-slate-500">OTP:</span> {parcel.otpCode ?? 'After pickup'}</p>
                             </div>
-                          ))}
-                        </div>
-                      </Card>
-
-                      <Card className="border-white/10 bg-white/5">
-                        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Receiver details</p>
-                        <div className="mt-4 space-y-2 text-sm text-slate-300">
-                          <p><span className="text-slate-500">Name:</span> {parcel.receiverName}</p>
-                          <p><span className="text-slate-500">Phone:</span> {viewerVerified ? parcel.receiverPhone : maskPhone(parcel.receiverPhone)}</p>
-                          <p><span className="text-slate-500">Address:</span> {parcel.receiverAddress}</p>
-                          <p><span className="text-slate-500">OTP:</span> {parcel.otpCode ?? 'Generated after pickup'}</p>
-                        </div>
-                      </Card>
-                    </div>
-
-                    {parcel.travelerName ? (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <Card className="border-white/10 bg-white/5">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Active traveler</p>
-                          <div className="mt-4 space-y-2 text-sm text-slate-300">
-                            <p><span className="text-slate-500">Name:</span> {parcel.travelerName}</p>
-                            <p><span className="text-slate-500">Verification:</span> {parcel.travelerVerificationStatus ? getVerificationLabel(parcel.travelerVerificationStatus) : 'Pending'}</p>
-                            <p><span className="text-slate-500">Rating:</span> {parcel.travelerRating ? `${parcel.travelerRating.toFixed(1)}/5` : 'Not rated yet'}</p>
-                          </div>
-                        </Card>
-
-                        <Card className="border-white/10 bg-white/5">
-                          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Workflow actions</p>
-                          <div className="mt-4 flex flex-col gap-3">
-                            {parcel.status === 'accepted' ? (
-                              <Button onClick={() => void handleStatusAdvance(parcel, 'picked')} disabled={actingParcelId === parcel.id}>
-                                {actingParcelId === parcel.id ? 'Updating...' : 'Mark picked up + generate OTP'}
-                              </Button>
-                            ) : null}
-                            {parcel.status === 'picked' ? (
-                              <Button onClick={() => void handleStatusAdvance(parcel, 'in_transit')} disabled={actingParcelId === parcel.id}>
-                                {actingParcelId === parcel.id ? 'Updating...' : 'Start transit tracking'}
-                              </Button>
-                            ) : null}
-                            {parcel.status === 'in_transit' ? (
-                              <Link
-                                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-                                to={ROUTES.dashboard}
-                              >
-                                Open order dashboard
-                              </Link>
-                            ) : null}
-                          </div>
+                          ) : (
+                            <div className="mt-4 space-y-2 text-sm text-slate-300">
+                              <p>Name, phone, and address unlock after you accept.</p>
+                              <p className="text-slate-500">Customer details stay private until the order is active.</p>
+                            </div>
+                          )}
                         </Card>
                       </div>
-                    ) : null}
 
-                    {parcel.status === 'requested' ? (
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <label className="space-y-2 text-sm text-slate-300">
-                          <span className="block font-medium">Traveler pickup point</span>
-                          <input
-                            value={handoffDrafts[parcel.id]?.pickupPoint ?? ''}
-                            onChange={(event) =>
-                              setHandoffDrafts((current) => ({
-                                ...current,
-                                [parcel.id]: {
-                                  pickupPoint: event.target.value,
-                                  dropPoint: current[parcel.id]?.dropPoint ?? '',
-                                },
-                              }))
-                            }
-                            placeholder="Example: Metro Gate 2, Delhi at 7:30 PM"
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
-                          />
-                        </label>
+                      {parcel.travelerName ? (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Card className="border-white/10 bg-white/5">
+                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Sender contact</p>
+                            <div className="mt-4 space-y-2 text-sm text-slate-300">
+                              <p><span className="text-slate-500">Name:</span> {parcel.senderName}</p>
+                              <p><span className="text-slate-500">Phone:</span> {parcel.senderPhone}</p>
+                              <p><span className="text-slate-500">Pickup:</span> {parcel.pickupLocation}</p>
+                            </div>
+                          </Card>
 
-                        <label className="space-y-2 text-sm text-slate-300">
-                          <span className="block font-medium">Traveler drop point</span>
-                          <input
-                            value={handoffDrafts[parcel.id]?.dropPoint ?? ''}
-                            onChange={(event) =>
-                              setHandoffDrafts((current) => ({
-                                ...current,
-                                [parcel.id]: {
-                                  pickupPoint: current[parcel.id]?.pickupPoint ?? '',
-                                  dropPoint: event.target.value,
-                                },
-                              }))
-                            }
-                            placeholder="Example: Station exit gate, Mumbai"
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
-                          />
-                        </label>
-                      </div>
-                    ) : null}
+                          <Card className="border-white/10 bg-white/5">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Actions</p>
+                              {parcel.status === 'accepted' ? <StatusBadge tone="warning">Fine Rs {TRAVELER_CANCELLATION_FINE}</StatusBadge> : null}
+                            </div>
+                            <div className="mt-4 flex flex-col gap-3">
+                              {parcel.status === 'accepted' ? (
+                                <>
+                                  <Button onClick={() => void handleStatusAdvance(parcel, 'picked')} disabled={actingParcelId === parcel.id}>
+                                    {actingParcelId === parcel.id ? 'Updating...' : 'Mark picked up'}
+                                  </Button>
+                                  <Button variant="secondary" onClick={() => void handleCancel(parcel)} disabled={actingParcelId === parcel.id}>
+                                    {actingParcelId === parcel.id ? 'Updating...' : 'Cancel order'}
+                                  </Button>
+                                </>
+                              ) : null}
+                              {parcel.status === 'picked' ? (
+                                <Button onClick={() => void handleStatusAdvance(parcel, 'in_transit')} disabled={actingParcelId === parcel.id}>
+                                  {actingParcelId === parcel.id ? 'Updating...' : 'Start live tracking'}
+                                </Button>
+                              ) : null}
+                              {parcel.status === 'in_transit' ? (
+                                <Link
+                                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                                  to={ROUTES.dashboard}
+                                >
+                                  Open dashboard
+                                </Link>
+                              ) : null}
+                            </div>
+                          </Card>
+                        </div>
+                      ) : null}
 
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                      <Button variant="secondary">View details</Button>
                       {parcel.status === 'requested' ? (
-                        <Button onClick={() => void handleAccept(parcel.id)} disabled={actingParcelId === parcel.id}>
-                          {actingParcelId === parcel.id ? 'Accepting...' : session ? 'Accept request' : 'Sign in to accept'}
-                          <ArrowRight className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button variant="secondary">
-                          <Truck className="h-4 w-4" />
-                          Active order
-                        </Button>
-                      )}
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <label className="space-y-2 text-sm text-slate-300">
+                            <span className="block font-medium">Pickup point</span>
+                            <input
+                              value={handoffDrafts[parcel.id]?.pickupPoint ?? ''}
+                              onChange={(event) =>
+                                setHandoffDrafts((current) => ({
+                                  ...current,
+                                  [parcel.id]: {
+                                    pickupPoint: event.target.value,
+                                    dropPoint: current[parcel.id]?.dropPoint ?? '',
+                                  },
+                                }))
+                              }
+                              placeholder="Metro Gate 2, Delhi"
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                            />
+                          </label>
+
+                          <label className="space-y-2 text-sm text-slate-300">
+                            <span className="block font-medium">Drop point</span>
+                            <input
+                              value={handoffDrafts[parcel.id]?.dropPoint ?? ''}
+                              onChange={(event) =>
+                                setHandoffDrafts((current) => ({
+                                  ...current,
+                                  [parcel.id]: {
+                                    pickupPoint: current[parcel.id]?.pickupPoint ?? '',
+                                    dropPoint: event.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder="Station gate, Mumbai"
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                            />
+                          </label>
+                        </div>
+                      ) : null}
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                        {parcel.status === 'requested' ? (
+                          <Button onClick={() => void handleAccept(parcel.id)} disabled={actingParcelId === parcel.id}>
+                            {actingParcelId === parcel.id ? 'Accepting...' : session ? 'Accept order' : 'Sign in to accept'}
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button variant="secondary">
+                            <Truck className="h-4 w-4" />
+                            Active order
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </div>
