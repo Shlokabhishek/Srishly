@@ -18,7 +18,7 @@ const howItWorks = [
   },
   {
     title: 'Notify and coordinate',
-    description: 'The user gets an assigned-traveler notification, then pickup, drop, and live tracking move into secure chat.',
+    description: 'The sender and traveler both get notified, then pickup, tracking, and OTP handoff move into an active secure order flow.',
   },
 ];
 
@@ -49,12 +49,12 @@ export default function Home() {
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-300">
                 Srishly helps senders and travelers coordinate city-to-city parcel delivery with validation, escrow-first
-                workflows, assignment notifications, and responsive dashboards built for production deployment.
+                workflows, assignment notifications, gated traveler discovery, and responsive dashboards built for production deployment.
               </p>
             </div>
 
             <RouteSearch
-              helperText="Search a supported city pair to explore verified travelers first."
+              helperText="Search a supported route to see availability first. Full traveler details unlock only after verification."
               onSearch={(fromCity, toCity) => navigate(`${ROUTES.findTraveler}?from=${encodeURIComponent(fromCity)}&to=${encodeURIComponent(toCity)}`)}
               submitLabel="Explore travelers"
             />

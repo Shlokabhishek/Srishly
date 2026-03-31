@@ -1,12 +1,13 @@
 export type AppMode = 'sender' | 'traveler';
 
 export type ParcelSize = 'Small' | 'Medium' | 'Large';
-export type ParcelStatus = 'posted' | 'matched' | 'in_transit' | 'delivered';
+export type ParcelStatus = 'requested' | 'accepted' | 'picked' | 'in_transit' | 'delivered';
 export type TripMode = 'flight' | 'train' | 'bus' | 'car';
 export type ReviewAction = 'approved' | 'rejected';
 export type UserRole = 'sender' | 'traveler';
 export type DeliveryChatActor = 'user' | 'traveler' | 'system';
 export type DeliveryCheckpointStatus = 'completed' | 'active' | 'upcoming';
+export type VerificationStatus = 'student_verified' | 'aadhaar_verified' | 'pending';
 
 export interface ParcelDraftInput {
   parcelCategory: string;
@@ -19,7 +20,11 @@ export interface ParcelDraftInput {
   toCity: string;
   reward: string;
   pickupDate: string;
+  pickupLocation: string;
   description: string;
+  receiverName: string;
+  receiverPhone: string;
+  receiverAddress: string;
   photoNames: string[];
   termsAccepted: boolean;
 }
@@ -27,6 +32,7 @@ export interface ParcelDraftInput {
 export interface Parcel {
   id: string;
   senderName: string;
+  senderPhone: string;
   parcelCategory: string;
   weight: number;
   dimensions: ParcelSize;
@@ -38,16 +44,31 @@ export interface Parcel {
   fromCity: string;
   toCity: string;
   pickupDate: string;
+  pickupLocation: string;
   createdAt: string;
   description: string;
+  receiverName: string;
+  receiverPhone: string;
+  receiverAddress: string;
   photoNames: string[];
   travelerName?: string;
+  travelerPhone?: string;
+  travelerVerificationStatus?: VerificationStatus;
+  travelerRating?: number;
+  orderStartedAt?: string;
+  pickedAt?: string;
+  inTransitAt?: string;
+  deliveredAt?: string;
   otpCode?: string;
 }
 
 export interface Trip {
   id: string;
   travelerName: string;
+  travelerPhone: string;
+  verificationStatus: VerificationStatus;
+  rating: number;
+  successfulDeliveries: number;
   fromCity: string;
   toCity: string;
   date: string;
@@ -107,6 +128,7 @@ export interface AssignmentNotification {
   id: string;
   parcelId: string;
   travelerName: string;
+  audience: UserRole;
   route: string;
   message: string;
   createdAt: string;

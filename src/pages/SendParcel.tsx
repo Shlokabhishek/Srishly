@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, MapPinned, Package2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, ImagePlus, MapPinned, Package2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 
@@ -26,6 +26,7 @@ export default function SendParcel() {
   const [errors, setErrors] = React.useState<FieldErrors<keyof ParcelDraftInput>>({});
   const [submitting, setSubmitting] = React.useState(false);
   const [formError, setFormError] = React.useState('');
+  const [showDisclaimer, setShowDisclaimer] = React.useState(true);
 
   useDocumentMeta(
     'Post a parcel request',
@@ -91,8 +92,24 @@ export default function SendParcel() {
   const isHighValueParcel = draft.declaredValue === 'More than Rs 5,000';
 
   return (
-    <div className="px-4 py-12 sm:px-6 lg:px-8">
+    <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-5xl space-y-8">
+        {showDisclaimer ? (
+          <Card className="border-red-400/30 bg-red-500/10">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="mt-1 h-5 w-5 text-red-300" />
+                <p className="text-sm leading-7 text-red-100">
+                  By using Srishly, you agree not to send cash, jewelry, or original government documents. All parcels may be subject to voluntary inspection by the traveler.
+                </p>
+              </div>
+              <Button variant="ghost" onClick={() => setShowDisclaimer(false)}>
+                Dismiss
+              </Button>
+            </div>
+          </Card>
+        ) : null}
+
         <div className="space-y-4">
           <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Sender workflow</p>
           <h1 className="text-4xl font-semibold text-white">Post a delivery request with validation built in.</h1>
@@ -304,15 +321,30 @@ export default function SendParcel() {
                     />
                   </FormField>
 
+                  <FormField
+                    error={errors.pickupLocation}
+                    htmlFor="pickupLocation"
+                    label="Pickup location"
+                    description="Exact handoff point where the traveler should collect the parcel."
+                  >
+                    <input
+                      id="pickupLocation"
+                      value={draft.pickupLocation}
+                      onChange={(event) => updateField('pickupLocation', event.target.value)}
+                      placeholder="Example: Gate 2, Rajiv Chowk Metro"
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                    />
+                  </FormField>
+
                   <Card className="space-y-4 border-white/10 bg-white/5">
                     <div className="flex items-center gap-3">
                       <MapPinned className="h-5 w-5 text-amber-300" />
-                      <h2 className="text-lg font-semibold text-white">Traveler chooses the handoff points</h2>
+                      <h2 className="text-lg font-semibold text-white">Traveler confirms final handoff points</h2>
                     </div>
                     <div className="space-y-2 text-sm leading-7 text-slate-300">
-                      <p>The sender only posts the route and parcel details.</p>
-                      <p>After acceptance, the traveler selects the exact pickup point and drop point inside the secure assignment flow.</p>
-                      <p>This keeps handoff control with the traveler who is actually traveling on that route.</p>
+                      <p>Sender submits preferred pickup location and receiver address.</p>
+                      <p>After acceptance, traveler confirms exact meeting points inside the secure order thread.</p>
+                      <p>Once parcel is picked, OTP is generated and visible to sender, traveler, and receiver.</p>
                     </div>
                   </Card>
                 </motion.div>
@@ -338,6 +370,39 @@ export default function SendParcel() {
                     />
                   </FormField>
 
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <FormField error={errors.receiverName} htmlFor="receiverName" label="Receiver name">
+                      <input
+                        id="receiverName"
+                        value={draft.receiverName}
+                        onChange={(event) => updateField('receiverName', event.target.value)}
+                        placeholder="Full name"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                      />
+                    </FormField>
+
+                    <FormField error={errors.receiverPhone} htmlFor="receiverPhone" label="Receiver phone">
+                      <input
+                        id="receiverPhone"
+                        value={draft.receiverPhone}
+                        onChange={(event) => updateField('receiverPhone', event.target.value.replace(/\D/g, '').slice(0, 10))}
+                        placeholder="10-digit number"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                      />
+                    </FormField>
+                  </div>
+
+                  <FormField error={errors.receiverAddress} htmlFor="receiverAddress" label="Receiver delivery address">
+                    <textarea
+                      id="receiverAddress"
+                      rows={3}
+                      value={draft.receiverAddress}
+                      onChange={(event) => updateField('receiverAddress', event.target.value)}
+                      placeholder="Apartment/landmark, street, locality, city"
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none"
+                    />
+                  </FormField>
+
                   <Card className="space-y-4 bg-white/5">
                     <div className="flex items-center gap-3">
                       <Package2 className="h-5 w-5 text-amber-300" />
@@ -347,7 +412,9 @@ export default function SendParcel() {
                       <p><span className="text-slate-500">Route:</span> {draft.fromCity || 'Origin'} -&gt; {draft.toCity || 'Destination'}</p>
                       <p><span className="text-slate-500">Category:</span> {draft.parcelCategory || 'Pending selection'}</p>
                       <p><span className="text-slate-500">Travel date:</span> {draft.pickupDate || 'Not set'}</p>
+                      <p><span className="text-slate-500">Pickup point:</span> {draft.pickupLocation || 'Not set'}</p>
                       <p><span className="text-slate-500">Reward:</span> {draft.reward ? `Rs ${draft.reward}` : 'Not set'}</p>
+                      <p><span className="text-slate-500">Receiver:</span> {draft.receiverName || 'Not set'}</p>
                     </div>
                   </Card>
 

@@ -14,7 +14,11 @@ function makeDraft(): ParcelDraftInput {
     toCity: 'Noida',
     reward: '250',
     pickupDate: '2099-01-01',
+    pickupLocation: 'Gate 2, Kashmere Gate Metro',
     description: 'Exam books',
+    receiverName: 'Rohan Mehta',
+    receiverPhone: '9876543210',
+    receiverAddress: 'Sector 18, Noida',
     photoNames: [],
     termsAccepted: true,
   };
@@ -75,7 +79,7 @@ describe('mockApi shared persistence behavior', () => {
         }),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify([{ id: 'parcel-1', status: 'posted' }]), {
+        new Response(JSON.stringify([{ id: 'parcel-1', status: 'requested' }]), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),

@@ -43,7 +43,11 @@ export function sanitizeParcelDraft(draft: ParcelDraftInput): ParcelDraftInput {
     ...draft,
     pickupAddress: sanitizeText(draft.pickupAddress, 200),
     dropoffAddress: sanitizeText(draft.dropoffAddress, 200),
+    pickupLocation: sanitizeText(draft.pickupLocation, 160),
     description: sanitizeText(draft.description, 280),
+    receiverName: sanitizeText(draft.receiverName, 80),
+    receiverPhone: sanitizeText(draft.receiverPhone.replace(/\D/g, ''), 10),
+    receiverAddress: sanitizeText(draft.receiverAddress, 220),
     photoNames: draft.photoNames.map((name) => sanitizeText(name, 80)),
   };
 }
@@ -95,6 +99,22 @@ export function validateParcelDraft(draft: ParcelDraftInput): FieldErrors<Parcel
     }
   }
 
+  if (sanitizedDraft.pickupLocation.trim().length < 6) {
+    errors.pickupLocation = 'Add a clear pickup location.';
+  }
+
+  if (sanitizedDraft.receiverName.trim().length < 3) {
+    errors.receiverName = 'Receiver name must be at least 3 characters.';
+  }
+
+  if (!/^\d{10}$/.test(sanitizedDraft.receiverPhone)) {
+    errors.receiverPhone = 'Receiver phone must be a valid 10-digit number.';
+  }
+
+  if (sanitizedDraft.receiverAddress.trim().length < 10) {
+    errors.receiverAddress = 'Provide a complete receiver address.';
+  }
+
   if (!sanitizedDraft.termsAccepted) {
     errors.termsAccepted = 'Accept the delivery and escrow terms to continue.';
   }
@@ -116,8 +136,8 @@ export function isStepValid(
 ): boolean {
   const stepFields: Record<number, ParcelDraftField[]> = {
     1: ['parcelCategory', 'weight', 'dimensions', 'declaredValue', 'description', 'photoNames'],
-    2: ['fromCity', 'toCity', 'pickupDate'],
-    3: ['reward', 'termsAccepted'],
+    2: ['fromCity', 'toCity', 'pickupDate', 'pickupLocation'],
+    3: ['reward', 'receiverName', 'receiverPhone', 'receiverAddress', 'termsAccepted'],
   };
 
   return !stepFields[step].some((field) => errors[field]);

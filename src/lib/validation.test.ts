@@ -38,7 +38,11 @@ describe('validation helpers', () => {
       toCity: 'Mumbai',
       reward: '650',
       pickupDate: '2099-01-01',
+      pickupLocation: 'Gate 2, Rajiv Chowk Metro',
       description: 'Handle with care',
+      receiverName: 'Ankit Sharma',
+      receiverPhone: '9876543210',
+      receiverAddress: 'Sector 62, Noida, Uttar Pradesh',
       termsAccepted: true,
     });
 

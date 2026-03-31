@@ -47,7 +47,11 @@ export const INITIAL_PARCEL_DRAFT: ParcelDraftInput = {
   toCity: '',
   reward: '',
   pickupDate: '',
+  pickupLocation: '',
   description: '',
+  receiverName: '',
+  receiverPhone: '',
+  receiverAddress: '',
   photoNames: [],
   termsAccepted: false,
 };

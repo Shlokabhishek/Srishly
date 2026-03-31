@@ -17,6 +17,10 @@ export default function handler(request: ApiRequest, response: ApiResponse) {
     {
       id: 'trip-001',
       travelerName: 'Amit R.',
+      travelerPhone: '9812345678',
+      verificationStatus: 'student_verified',
+      rating: 4.8,
+      successfulDeliveries: 18,
       fromCity: 'Delhi',
       toCity: 'Lucknow',
       date: '2026-03-28',

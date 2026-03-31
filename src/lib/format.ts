@@ -32,3 +32,12 @@ export function formatDateTime(value: string) {
     minute: '2-digit',
   }).format(parsed);
 }
+
+export function maskPhone(value: string) {
+  const digits = value.replace(/\D/g, '');
+  if (digits.length < 10) {
+    return 'Hidden';
+  }
+
+  return `${digits.slice(0, 2)}******${digits.slice(-2)}`;
+}

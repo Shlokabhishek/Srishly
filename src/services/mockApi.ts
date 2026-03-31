@@ -174,11 +174,125 @@ function setStoredDeliveryThreads(threads: DeliveryThread[]) {
   writeLocalStorage(STORAGE_KEYS.deliveryThreads, threads);
 }
 
+function createOtpCode() {
+  return `${Math.floor(1000 + Math.random() * 9000)}`;
+}
+
+function buildCheckpoints(parcel: Parcel, pickupPoint: string, dropPoint: string): DeliveryThread['checkpoints'] {
+  const stages: Array<{ key: Parcel['status']; label: string; location: string; etaLabel: string }> = [
+    {
+      key: 'requested',
+      label: 'Requested',
+      location: parcel.fromCity,
+      etaLabel: 'Request created',
+    },
+    {
+      key: 'accepted',
+      label: 'Accepted',
+      location: pickupPoint,
+      etaLabel: 'Traveler accepted the request',
+    },
+    {
+      key: 'picked',
+      label: 'Picked',
+      location: pickupPoint,
+      etaLabel: parcel.otpCode ? `OTP ${parcel.otpCode} generated` : 'Waiting for parcel pickup',
+    },
+    {
+      key: 'in_transit',
+      label: 'In Transit',
+      location: `${parcel.fromCity} -> ${parcel.toCity}`,
+      etaLabel: parcel.inTransitAt ? 'Live tracking active' : 'Tracking starts after pickup',
+    },
+    {
+      key: 'delivered',
+      label: 'Delivered',
+      location: dropPoint,
+      etaLabel: parcel.deliveredAt ? 'OTP verified and handoff completed' : 'Receiver OTP handoff pending',
+    },
+  ];
+
+  const currentIndex = stages.findIndex((stage) => stage.key === parcel.status);
+
+  return stages.map((stage, index) => ({
+    id: createId('checkpoint'),
+    label: stage.label,
+    location: stage.location,
+    etaLabel: stage.etaLabel,
+    status: index < currentIndex ? 'completed' : index === currentIndex ? 'active' : 'upcoming',
+  }));
+}
+
+function deriveTrackingState(parcel: Parcel, pickupPoint: string, dropPoint: string) {
+  if (parcel.status === 'delivered') {
+    return {
+      currentLocation: dropPoint,
+      progress: 100,
+      checkpoints: buildCheckpoints(parcel, pickupPoint, dropPoint).map((checkpoint) => ({
+        ...checkpoint,
+        status: 'completed' as const,
+      })),
+    };
+  }
+
+  if (parcel.status === 'in_transit') {
+    return {
+      currentLocation: `Live on route to ${parcel.toCity}`,
+      progress: 76,
+      checkpoints: buildCheckpoints(parcel, pickupPoint, dropPoint),
+    };
+  }
+
+  if (parcel.status === 'picked') {
+    return {
+      currentLocation: pickupPoint,
+      progress: 44,
+      checkpoints: buildCheckpoints(parcel, pickupPoint, dropPoint),
+    };
+  }
+
+  if (parcel.status === 'accepted') {
+    return {
+      currentLocation: `Pickup pending at ${pickupPoint}`,
+      progress: 22,
+      checkpoints: buildCheckpoints(parcel, pickupPoint, dropPoint),
+    };
+  }
+
+  return {
+    currentLocation: `Awaiting traveler confirmation in ${parcel.fromCity}`,
+    progress: 6,
+    checkpoints: buildCheckpoints(parcel, pickupPoint, dropPoint),
+  };
+}
+
+function syncDeliveryThreadsWithParcel(parcel: Parcel) {
+  const threads = getStoredDeliveryThreads().map((thread) => {
+    if (thread.parcelId !== parcel.id) {
+      return thread;
+    }
+
+    const nextRuntime = deriveTrackingState(parcel, thread.pickupSummary, thread.dropoffSummary);
+
+    return {
+      ...thread,
+      travelerName: parcel.travelerName ?? thread.travelerName,
+      currentLocation: nextRuntime.currentLocation,
+      progress: nextRuntime.progress,
+      lastUpdated: new Date().toISOString(),
+      checkpoints: nextRuntime.checkpoints,
+    };
+  });
+
+  setStoredDeliveryThreads(threads);
+}
+
 function createDeliveryThread(parcel: Parcel, travelerName: string, pickupPoint: string, dropPoint: string): DeliveryThread {
   const isHighValue = parcel.declaredValue === 'More than Rs 5,000' || parcel.declaredValue === 'Rs 2,000 - Rs 5,000';
   const tagStart = parcel.fromCity.slice(0, 3).toUpperCase();
   const tagEnd = parcel.toCity.slice(0, 3).toUpperCase();
   const threadId = createId('thread');
+  const runtime = deriveTrackingState(parcel, pickupPoint, dropPoint);
 
   return {
     id: threadId,
@@ -191,9 +305,9 @@ function createDeliveryThread(parcel: Parcel, travelerName: string, pickupPoint:
     securityGroupTag: `SG-${tagStart}-${tagEnd}-${Math.floor(10 + Math.random() * 90)}`,
     pickupSummary: pickupPoint,
     dropoffSummary: dropPoint,
-    currentLocation: `Awaiting pickup scan in ${parcel.fromCity}`,
+    currentLocation: runtime.currentLocation,
     lastUpdated: new Date().toISOString(),
-    progress: 8,
+    progress: runtime.progress,
     responsibilitySummary: isHighValue
       ? 'High-value item protocol is active. Keep the parcel sealed, verify the tag at pickup, and complete OTP handoff together.'
       : 'Traveler is responsible for carrying the sealed parcel on the agreed route and completing handoff only after OTP confirmation.',
@@ -212,29 +326,7 @@ function createDeliveryThread(parcel: Parcel, travelerName: string, pickupPoint:
         sentAt: new Date().toISOString(),
       },
     ],
-    checkpoints: [
-      {
-        id: createId('checkpoint'),
-        label: 'Pickup plan',
-        location: parcel.fromCity,
-        etaLabel: 'Waiting for traveler confirmation',
-        status: 'active',
-      },
-      {
-        id: createId('checkpoint'),
-        label: 'In transit',
-        location: `${parcel.fromCity} -> ${parcel.toCity}`,
-        etaLabel: 'Starts after pickup',
-        status: 'upcoming',
-      },
-      {
-        id: createId('checkpoint'),
-        label: 'Drop + OTP handoff',
-        location: parcel.toCity,
-        etaLabel: `ETA on ${parcel.pickupDate}`,
-        status: 'upcoming',
-      },
-    ],
+    checkpoints: runtime.checkpoints,
   };
 }
 
@@ -253,6 +345,7 @@ async function createFallbackParcel(draft: ParcelDraftInput) {
   const nextParcel: Parcel = {
     id: createId('parcel'),
     senderName: 'Current Sender',
+    senderPhone: '98******10',
     parcelCategory: sanitized.parcelCategory,
     weight: Number(sanitized.weight),
     dimensions: sanitized.dimensions as Parcel['dimensions'],
@@ -260,14 +353,17 @@ async function createFallbackParcel(draft: ParcelDraftInput) {
     pickupAddress: sanitized.pickupAddress || 'Selected by traveler after acceptance',
     dropoffAddress: sanitized.dropoffAddress || 'Selected by traveler after acceptance',
     reward: Number(sanitized.reward),
-    status: 'posted',
+    status: 'requested',
     fromCity: sanitized.fromCity,
     toCity: sanitized.toCity,
     pickupDate: sanitized.pickupDate,
+    pickupLocation: sanitized.pickupLocation,
     createdAt: new Date().toISOString(),
     description: sanitized.description,
+    receiverName: sanitized.receiverName,
+    receiverPhone: sanitized.receiverPhone,
+    receiverAddress: sanitized.receiverAddress,
     photoNames: sanitized.photoNames,
-    otpCode: `${Math.floor(1000 + Math.random() * 9000)}`,
   };
 
   const parcels = [nextParcel, ...getStoredParcels()];
@@ -288,15 +384,29 @@ async function completeFallbackParcelDelivery(id: string, otp: string) {
     throw new AppValidationError('Parcel could not be found.');
   }
 
+  if (currentParcel.status !== 'in_transit') {
+    throw new AppValidationError('Delivery can be completed only after the parcel is in transit.');
+  }
+
   if (currentParcel.otpCode !== otp) {
     throw new AppValidationError('The delivery code does not match this parcel.');
   }
 
   const nextParcels = parcels.map((parcel) =>
-    parcel.id === id ? { ...parcel, status: 'delivered' as const } : parcel,
+    parcel.id === id
+      ? {
+          ...parcel,
+          status: 'delivered' as const,
+          deliveredAt: new Date().toISOString(),
+        }
+      : parcel,
   );
 
   setStoredParcels(nextParcels);
+  const deliveredParcel = nextParcels.find((parcel) => parcel.id === id);
+  if (deliveredParcel) {
+    syncDeliveryThreadsWithParcel(deliveredParcel);
+  }
   await sleep();
   return nextParcels;
 }
@@ -321,7 +431,7 @@ async function acceptFallbackParcelRequest(id: string, travelerName: string, pic
     throw new AppValidationError('Parcel could not be found.');
   }
 
-  if (currentParcel.status !== 'posted') {
+  if (currentParcel.status !== 'requested') {
     throw new AppValidationError('This parcel request is no longer open for acceptance.');
   }
 
@@ -329,8 +439,12 @@ async function acceptFallbackParcelRequest(id: string, travelerName: string, pic
     parcel.id === id
       ? {
           ...parcel,
-          status: 'matched' as const,
+          status: 'accepted' as const,
           travelerName: trimmedTravelerName,
+          travelerPhone: '98******32',
+          travelerVerificationStatus: 'aadhaar_verified' as const,
+          travelerRating: 4.7,
+          orderStartedAt: new Date().toISOString(),
         }
       : parcel,
   );
@@ -341,19 +455,38 @@ async function acceptFallbackParcelRequest(id: string, travelerName: string, pic
     id: createId('notification'),
     parcelId: currentParcel.id,
     travelerName: trimmedTravelerName,
+    audience: 'sender',
     route: `${currentParcel.fromCity} -> ${currentParcel.toCity}`,
     message: `${trimmedTravelerName} accepted your request for ${currentParcel.fromCity} to ${currentParcel.toCity}.`,
     createdAt: new Date().toISOString(),
   };
 
-  setStoredAssignmentNotifications([nextNotification, ...getStoredAssignmentNotifications()]);
+  const travelerNotification: AssignmentNotification = {
+    id: createId('notification'),
+    parcelId: currentParcel.id,
+    travelerName: trimmedTravelerName,
+    audience: 'traveler',
+    route: `${currentParcel.fromCity} -> ${currentParcel.toCity}`,
+    message: `You accepted ${currentParcel.id}. Sender ${currentParcel.senderName} is now in active order tracking.`,
+    createdAt: new Date().toISOString(),
+  };
+
+  setStoredAssignmentNotifications([nextNotification, travelerNotification, ...getStoredAssignmentNotifications()]);
   const currentThreads = getStoredDeliveryThreads();
   const hasThread = currentThreads.some((thread) => thread.parcelId === currentParcel.id);
 
   if (!hasThread) {
     setStoredDeliveryThreads([
       createDeliveryThread(
-        { ...currentParcel, travelerName: trimmedTravelerName, status: 'matched' },
+        {
+          ...currentParcel,
+          travelerName: trimmedTravelerName,
+          travelerPhone: '98******32',
+          travelerVerificationStatus: 'aadhaar_verified',
+          travelerRating: 4.7,
+          status: 'accepted',
+          orderStartedAt: new Date().toISOString(),
+        },
         trimmedTravelerName,
         trimmedPickupPoint,
         trimmedDropPoint,
@@ -422,11 +555,39 @@ export async function updateParcelStatus(id: string, status: Parcel['status']) {
     return (await getParcels()).map((parcel) => (parcel.id === updated.id ? updated : parcel));
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
-      const nextParcels = getStoredParcels().map((parcel) =>
-        parcel.id === id ? { ...parcel, status } : parcel,
+      const parcels = getStoredParcels();
+      const currentParcel = parcels.find((parcel) => parcel.id === id);
+
+      if (!currentParcel) {
+        throw new AppValidationError('Parcel could not be found.');
+      }
+
+      if (status === 'picked' && currentParcel.status !== 'accepted') {
+        throw new AppValidationError('Pickup can start only after a traveler accepts the request.');
+      }
+
+      if (status === 'in_transit' && currentParcel.status !== 'picked') {
+        throw new AppValidationError('Start transit only after pickup is confirmed.');
+      }
+
+      const nextTimestamp = new Date().toISOString();
+      const nextParcels = parcels.map((parcel) =>
+        parcel.id === id
+          ? {
+              ...parcel,
+              status,
+              otpCode: status === 'picked' ? parcel.otpCode ?? createOtpCode() : parcel.otpCode,
+              pickedAt: status === 'picked' ? nextTimestamp : parcel.pickedAt,
+              inTransitAt: status === 'in_transit' ? nextTimestamp : parcel.inTransitAt,
+            }
+          : parcel,
       );
 
       setStoredParcels(nextParcels);
+      const updatedParcel = nextParcels.find((parcel) => parcel.id === id);
+      if (updatedParcel) {
+        syncDeliveryThreadsWithParcel(updatedParcel);
+      }
       await sleep();
       return nextParcels;
     }
