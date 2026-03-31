@@ -316,11 +316,14 @@ export default function FindTrip() {
                       <div className="grid gap-5 xl:grid-cols-[0.58fr_0.42fr]">
                         <Card className="border-white/10 bg-white/5">
                           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Status</p>
-                          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                          <div
+                            className="mt-4 grid gap-3"
+                            style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))' }}
+                          >
                             {getOrderTimeline(parcel).map((stage) => (
-                              <div key={stage.key} className="rounded-2xl border border-white/10 bg-slate-950/40 p-3">
-                                <p className="text-sm font-semibold text-white">{stage.label}</p>
-                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">{stage.state}</p>
+                              <div key={stage.key} className="min-w-0 rounded-2xl border border-white/10 bg-slate-950/40 p-3">
+                                <p className="text-sm font-semibold leading-snug text-white break-words">{stage.label}</p>
+                                <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500 break-words">{stage.state}</p>
                               </div>
                             ))}
                           </div>
