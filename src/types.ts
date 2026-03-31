@@ -82,6 +82,8 @@ export interface Trip {
 export interface VerificationCase {
   id: string;
   travelerName: string;
+  email?: string;
+  userId?: string;
   route: string;
   idType: string;
   submittedAt: string;
@@ -156,6 +158,7 @@ export interface AuthUser {
   studentIdNumber: string;
   emailVerified: boolean;
   idVerified: boolean;
+  isAdmin?: boolean;
   idCardImageName: string;
   rolePreference: UserRole;
   createdAt: string;

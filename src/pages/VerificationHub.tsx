@@ -100,11 +100,8 @@ export default function VerificationHub() {
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="space-y-4">
           <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Verification operations</p>
-          <h1 className="text-4xl font-semibold text-white">Review traveler onboarding requests without losing audit visibility.</h1>
-          <p className="max-w-3xl text-sm leading-7 text-slate-300">
-            This internal-style admin page now behaves like a real queue with persistent review state, search, and audit
-            logging instead of static mock tiles.
-          </p>
+          <h1 className="text-4xl font-semibold text-white">Approve trusted users.</h1>
+          <p className="max-w-3xl text-sm text-slate-300">Review trust requests, approve good users, and reject incomplete submissions.</p>
         </div>
 
         <div className="grid gap-5 md:grid-cols-3">
@@ -166,6 +163,7 @@ export default function VerificationHub() {
                             </StatusBadge>
                           </div>
                           <p className="text-sm text-slate-300">{item.route}</p>
+                          {item.email ? <p className="text-sm text-slate-400">{item.email}</p> : null}
                           <p className="text-sm text-slate-400">
                             {item.idType} submitted from {item.city}
                           </p>

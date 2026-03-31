@@ -19,3 +19,22 @@ export default function ProtectedRoute({ children }: { children: ReactElement })
 
   return children;
 }
+
+export function AdminRoute({ children }: { children: ReactElement }) {
+  const { loading, session } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return <PageLoader fullScreen label="Checking admin access" />;
+  }
+
+  if (!session) {
+    return <Navigate replace to={ROUTES.auth} state={{ from: location.pathname }} />;
+  }
+
+  if (!session.user.isAdmin) {
+    return <Navigate replace to={ROUTES.dashboard} />;
+  }
+
+  return children;
+}

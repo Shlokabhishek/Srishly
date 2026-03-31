@@ -2,6 +2,7 @@ import { seedAssignmentNotifications, seedDeliveryThreads, seedParcels, seedTrip
 import { readLocalStorage, writeLocalStorage } from '@/lib/storage';
 import { createId, sleep } from '@/lib/utils';
 import { validateOtp, validateParcelDraft, sanitizeParcelDraft } from '@/lib/validation';
+import { syncLocalUserVerification } from '@/lib/localAuth';
 import { STORAGE_KEYS, TRAVELER_CANCELLATION_FINE } from '@/constants';
 import type { AssignmentNotification, DeliveryThread, Parcel, ParcelDraftInput, ReviewAction, Trip, VerificationCase } from '@/types';
 
@@ -134,6 +135,16 @@ function getStoredVerificationCases() {
 
 function setStoredVerificationCases(cases: VerificationCase[]) {
   writeLocalStorage(STORAGE_KEYS.verificationCases, cases);
+}
+
+function mergeVerificationCases(primary: VerificationCase[], secondary: VerificationCase[]) {
+  const merged = new Map<string, VerificationCase>();
+
+  [...secondary, ...primary].forEach((item) => {
+    merged.set(item.id, item);
+  });
+
+  return Array.from(merged.values()).sort((left, right) => right.submittedAt.localeCompare(left.submittedAt));
 }
 
 function getStoredAssignmentNotifications() {
@@ -740,7 +751,10 @@ export async function getTrips() {
 
 export async function getVerificationCases() {
   try {
-    return await requestApi<VerificationCase[]>('/verification-cases');
+    const remoteCases = await requestApi<VerificationCase[]>('/verification-cases');
+    const mergedCases = mergeVerificationCases(remoteCases, getStoredVerificationCases());
+    setStoredVerificationCases(mergedCases);
+    return mergedCases;
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
       return getFallbackVerificationCases();
@@ -770,10 +784,21 @@ export async function reviewVerificationCase(id: string, action: ReviewAction) {
       }),
     });
 
-    return (await getVerificationCases()).map((item) => (item.id === updated.id ? updated : item));
+    const nextCases = (await getVerificationCases()).map((item) => (item.id === updated.id ? { ...item, ...updated } : item));
+    setStoredVerificationCases(nextCases);
+    const reviewedCase = nextCases.find((item) => item.id === id);
+    if (reviewedCase) {
+      syncLocalUserVerification(reviewedCase);
+    }
+    return nextCases;
   } catch (error) {
     if (shouldUseFallbackApi(error)) {
-      return reviewFallbackVerificationCase(id, action);
+      const nextCases = await reviewFallbackVerificationCase(id, action);
+      const reviewedCase = nextCases.find((item) => item.id === id);
+      if (reviewedCase) {
+        syncLocalUserVerification(reviewedCase);
+      }
+      return nextCases;
     }
 
     throw toAppError(error);

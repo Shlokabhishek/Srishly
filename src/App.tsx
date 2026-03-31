@@ -8,7 +8,7 @@ import Header from '@/components/Header';
 import PageLoader from '@/components/ui/PageLoader';
 import RouteErrorBoundary from '@/components/RouteErrorBoundary';
 import ScrollToTop from '@/components/ScrollToTop';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import ProtectedRoute, { AdminRoute } from '@/components/ProtectedRoute';
 import { AuthProvider } from '@/context/AuthContext';
 import { ModeProvider } from '@/context/ModeContext';
 
@@ -47,9 +47,9 @@ function AppRoutes() {
           <Route
             path="/verification-hub"
             element={
-              <ProtectedRoute>
+              <AdminRoute>
                 <VerificationHub />
-              </ProtectedRoute>
+              </AdminRoute>
             }
           />
           <Route path="*" element={<NotFound />} />

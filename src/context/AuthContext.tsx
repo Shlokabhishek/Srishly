@@ -1,7 +1,8 @@
 import * as React from 'react';
 
+import { getLocalAuthSession } from '@/lib/localAuth';
 import { supabase } from '@/lib/supabase';
-import { getCurrentSession, loginUser, logoutUser, mapSupabaseSession, registerUser } from '@/services/authApi';
+import { getCurrentSession, loginUser, logoutUser, mapSupabaseSession, registerUser, requestPasswordReset } from '@/services/authApi';
 import type { AuthLoginInput, AuthRegisterInput, AuthRegisterResult, AuthSession } from '@/types';
 
 interface AuthContextValue {
@@ -11,6 +12,7 @@ interface AuthContextValue {
   login: (input: AuthLoginInput) => Promise<AuthSession>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  requestPasswordReset: (email: string, nextPassword?: string) => Promise<string>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined);
@@ -41,6 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      const localSession = getLocalAuthSession();
+      if (localSession?.user.isAdmin) {
+        setSession(localSession);
+        setLoading(false);
+        return;
+      }
+
       setSession(nextSession ? mapSupabaseSession(nextSession) : null);
       setLoading(false);
     });
@@ -67,6 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null);
   }, []);
 
+  const resetPassword = React.useCallback(async (email: string, nextPassword?: string) => {
+    return requestPasswordReset(email, nextPassword);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -76,6 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         logout,
         refreshSession,
+        requestPasswordReset: resetPassword,
       }}
     >
       {children}

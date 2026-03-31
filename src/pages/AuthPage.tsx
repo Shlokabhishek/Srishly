@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Camera, LoaderCircle, Lock, Mail, Phone, ScanLine, UserRound, WalletCards } from 'lucide-react';
+import { Camera, LoaderCircle, Lock, Mail, Phone, ScanLine, ShieldCheck, UserRound, WalletCards } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import Button from '@/components/ui/Button';
@@ -10,14 +10,15 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import { ROUTES } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
-import { isShardaEmail, normalizeName, normalizePhone, normalizeStudentId, parseIdCardText, validateRegistrationInput } from '@/lib/auth';
-import { supabaseConfigError } from '@/lib/supabase';
+import { isSupabaseConfigured } from '@/lib/supabase';
+import { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_PASSWORD } from '@/lib/localAuth';
+import { isValidEmail, normalizeName, normalizePhone, normalizeStudentId, parseIdCardText, validateRegistrationInput } from '@/lib/auth';
 import type { ParsedIdCard } from '@/types';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'admin';
 
 export default function AuthPage() {
-  const { login, register, refreshSession, session } = useAuth();
+  const { login, register, refreshSession, requestPasswordReset, session } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const redirectTo = (location.state as { from?: string } | null)?.from || ROUTES.dashboard;
@@ -33,25 +34,32 @@ export default function AuthPage() {
   const [ocrLoading, setOcrLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [notice, setNotice] = React.useState('');
   const [emailTouched, setEmailTouched] = React.useState(false);
   const [awaitingVerification, setAwaitingVerification] = React.useState(false);
   const [verificationEmail, setVerificationEmail] = React.useState('');
+  const [showReset, setShowReset] = React.useState(false);
+  const [resetEmail, setResetEmail] = React.useState('');
+  const [resetPasswordValue, setResetPasswordValue] = React.useState('');
+  const [resetConfirmValue, setResetConfirmValue] = React.useState('');
 
   useDocumentMeta(
-    'Sharda authentication',
-    'Sign in with your official Sharda University email, upload your student ID card, and autofill profile details securely.',
+    'Account access',
+    'Register, sign in, reset your password, or use the admin approval login for trust reviews.',
   );
 
   React.useEffect(() => {
     if (session) {
-      navigate(awaitingVerification ? ROUTES.home : redirectTo, { replace: true });
+      navigate(session.user.isAdmin ? ROUTES.verificationHub : awaitingVerification ? ROUTES.home : redirectTo, { replace: true });
     }
   }, [awaitingVerification, navigate, redirectTo, session]);
 
   React.useEffect(() => {
     setError('');
+    setNotice('');
     setAwaitingVerification(false);
     setVerificationEmail('');
+    setShowReset(false);
   }, [mode]);
 
   React.useEffect(() => {
@@ -69,15 +77,16 @@ export default function AuthPage() {
   }, [awaitingVerification, refreshSession, session]);
 
   const normalizedEmail = email.trim().toLowerCase();
-  const emailLooksValid = isShardaEmail(normalizedEmail);
+  const emailLooksValid = isValidEmail(normalizedEmail);
   const shouldShowEmailError = emailTouched && normalizedEmail.length > 0 && !emailLooksValid;
-  const shouldShowManualEmailHint = mode === 'register' && Boolean(ocrResult && !ocrResult.extractedEmail) && normalizedEmail.length === 0;
+  const isRegisterMode = mode === 'register';
+  const isAdminMode = mode === 'admin';
   const isSubmitDisabled =
     submitting ||
     ocrLoading ||
-    Boolean(supabaseConfigError) ||
-    mode === 'register' &&
-      (!emailLooksValid || !password || !phone || !name || !studentIdNumber || !idCardImageName);
+    (isRegisterMode
+      ? !emailLooksValid || !password || !phone || !name || !studentIdNumber
+      : !emailLooksValid || !password);
 
   async function handleIdCardUpload(file: File | null) {
     if (!file) {
@@ -85,6 +94,7 @@ export default function AuthPage() {
     }
 
     setError('');
+    setNotice('');
     setOcrLoading(true);
 
     try {
@@ -112,11 +122,10 @@ export default function AuthPage() {
         setEmailTouched(true);
       }
 
-      if (parsed.confidence < 40) {
-        setError('We could not confidently verify the uploaded card. Please use a clearer Sharda ID image.');
-      }
+      setNotice(parsed.confidence >= 40 ? 'ID proof scanned. You can still edit the fields.' : 'ID proof uploaded. Fill any missing details manually.');
     } catch {
-      setError('We could not read the ID card. Try a clearer image with the full card visible.');
+      setError('We could not read the ID image. You can still fill the fields manually.');
+      setIdCardImageName(file.name);
     } finally {
       setOcrLoading(false);
     }
@@ -125,13 +134,14 @@ export default function AuthPage() {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
+    setNotice('');
 
     try {
       setSubmitting(true);
 
-      if (mode === 'login') {
-        await login({ email, password });
-        navigate(redirectTo, { replace: true });
+      if (!isRegisterMode) {
+        const nextSession = await login({ email, password });
+        navigate(nextSession.user.isAdmin ? ROUTES.verificationHub : redirectTo, { replace: true });
         return;
       }
 
@@ -147,11 +157,6 @@ export default function AuthPage() {
       const firstError = Object.values(registrationErrors)[0];
       if (firstError) {
         setError(firstError);
-        return;
-      }
-
-      if (!ocrResult || ocrResult.confidence < 40 || !ocrResult.rawText.toUpperCase().includes('SHARDA')) {
-        setError('Upload a valid Sharda University ID card image before continuing.');
         return;
       }
 
@@ -178,28 +183,95 @@ export default function AuthPage() {
     }
   }
 
+  async function handlePasswordReset(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+    setNotice('');
+
+    const targetEmail = (resetEmail || email).trim().toLowerCase();
+    if (!isValidEmail(targetEmail)) {
+      setError('Enter a valid email to reset the password.');
+      return;
+    }
+
+    if (!isSupabaseConfigured) {
+      if (resetPasswordValue.length < 8) {
+        setError('New password must be at least 8 characters.');
+        return;
+      }
+
+      if (resetPasswordValue !== resetConfirmValue) {
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+
+    try {
+      setSubmitting(true);
+      const message = await requestPasswordReset(targetEmail, resetPasswordValue);
+      setNotice(message);
+      setShowReset(false);
+      setResetEmail('');
+      setResetPasswordValue('');
+      setResetConfirmValue('');
+    } catch (submissionError) {
+      setError(submissionError instanceof Error ? submissionError.message : 'Password reset failed.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+
+    if (nextMode === 'admin') {
+      setEmail(LOCAL_ADMIN_EMAIL);
+      setPassword('');
+      setEmailTouched(true);
+      return;
+    }
+
+    if (mode === 'admin') {
+      setEmail('');
+      setPassword('');
+      setEmailTouched(false);
+    }
+  }
+
   return (
     <div className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <Card highlighted className="space-y-5">
-          <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Student authentication</p>
-          <h1 className="text-4xl font-semibold text-white">Sharda-only access with ID-card assisted onboarding.</h1>
-          <p className="text-sm leading-7 text-slate-300">
-            Register using your official Sharda University email such as <code>name@sharda.ac.in</code> or{' '}
-            <code>name@ug.sharda.ac.in</code>, upload your university ID card, let OCR prefill your name and student ID,
-            then confirm your phone number.
+          <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Account access</p>
+          <h1 className="text-4xl font-semibold text-white">Register, reset your password, or sign in as admin.</h1>
+          <p className="text-sm text-slate-300">
+            Create a user account with email, phone, and ID details. Uploading ID proof helps the admin approve trusted access faster.
           </p>
-          <ul className="space-y-3 text-sm leading-7 text-slate-300">
-            <li>Email domain is restricted to Sharda accounts.</li>
-            <li>ID card OCR looks for Sharda branding, your name, and student identifier text.</li>
-            <li>Accounts are managed by Supabase Auth with persistent browser sessions.</li>
+          <ul className="space-y-3 text-sm text-slate-300">
+            <li>Register works even without external auth setup.</li>
+            <li>Password reset is available from the login screen.</li>
+            <li>Admin login can open the trust approval queue.</li>
           </ul>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold text-white">Auth mode</p>
+              <StatusBadge tone={isSupabaseConfigured ? 'success' : 'warning'}>
+                {isSupabaseConfigured ? 'Supabase live' : 'Local demo auth'}
+              </StatusBadge>
+            </div>
+            <p className="mt-3 text-sm text-slate-300">
+              Admin login email: <span className="font-medium text-white">{LOCAL_ADMIN_EMAIL}</span>
+            </p>
+            <p className="mt-2 text-sm text-slate-400">
+              Default admin password: <span className="font-medium text-white">{LOCAL_ADMIN_PASSWORD}</span>
+            </p>
+          </div>
           {ocrResult ? (
             <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-white">OCR result</span>
+                <span className="text-sm font-semibold text-white">ID scan</span>
                 <StatusBadge tone={ocrResult.confidence >= 60 ? 'success' : 'warning'}>
-                  confidence {ocrResult.confidence}%
+                  {ocrResult.confidence}% match
                 </StatusBadge>
               </div>
               <p className="text-sm text-slate-300">Name: {ocrResult.extractedName || 'Not found'}</p>
@@ -213,22 +285,29 @@ export default function AuthPage() {
           <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
             <button
               type="button"
-              onClick={() => setMode('register')}
+              onClick={() => switchMode('register')}
               className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'register' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
             >
               Register
             </button>
             <button
               type="button"
-              onClick={() => setMode('login')}
+              onClick={() => switchMode('login')}
               className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'login' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
             >
               Login
             </button>
+            <button
+              type="button"
+              onClick={() => switchMode('admin')}
+              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'admin' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
+            >
+              Admin
+            </button>
           </div>
 
-          {supabaseConfigError ? <ErrorBanner message={supabaseConfigError} /> : null}
           {error ? <ErrorBanner message={error} /> : null}
+          {notice ? <StatusBadge tone="success">{notice}</StatusBadge> : null}
           {awaitingVerification ? (
             <div className="space-y-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-sm text-emerald-100">
               <div className="flex items-center justify-between gap-3">
@@ -237,13 +316,12 @@ export default function AuthPage() {
               </div>
               <p>
                 We sent a verification link to <span className="font-medium text-white">{verificationEmail || normalizedEmail}</span>.
-                Open it, finish verification, and this page will move you to the home page automatically.
               </p>
             </div>
           ) : null}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
-            <FormField htmlFor="auth-email" label="Sharda email">
+            <FormField htmlFor="auth-email" label={isAdminMode ? 'Admin email' : 'Email'}>
               <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                 <Mail className="h-4 w-4 text-amber-300" />
                 <input
@@ -252,9 +330,9 @@ export default function AuthPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   onBlur={() => setEmailTouched(true)}
-                  placeholder="your.name@ug.sharda.ac.in"
+                  placeholder={isAdminMode ? LOCAL_ADMIN_EMAIL : 'name@example.com'}
                   className="w-full bg-transparent text-white outline-none"
-                  autoComplete={mode === 'login' ? 'username' : 'email'}
+                  autoComplete={mode === 'register' ? 'email' : 'username'}
                 />
               </div>
             </FormField>
@@ -267,24 +345,24 @@ export default function AuthPage() {
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
-                  placeholder="At least 8 characters"
+                  placeholder={isAdminMode ? 'Enter admin password' : 'At least 8 characters'}
                   className="w-full bg-transparent text-white outline-none"
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                 />
               </div>
             </FormField>
 
-            {mode === 'register' ? (
+            {isRegisterMode ? (
               <>
                 <FormField
                   htmlFor="auth-id-card"
-                  label="Student ID card image"
-                  description="Upload a clear front image of your Sharda ID card so we can read the printed details."
+                  label="ID proof image"
+                  description="Optional, but recommended for faster admin trust approval."
                 >
                   <label className="flex cursor-pointer items-center justify-between gap-4 rounded-2xl border border-dashed border-white/15 bg-white/5 px-4 py-4 text-sm text-slate-300 transition hover:border-amber-300/40">
                     <div className="flex items-center gap-3">
                       <Camera className="h-5 w-5 text-amber-300" />
-                      <span>{idCardImageName || 'Choose ID card image'}</span>
+                      <span>{idCardImageName || 'Choose ID image'}</span>
                     </div>
                     {ocrLoading ? <LoaderCircle className="h-4 w-4 animate-spin text-amber-300" /> : <ScanLine className="h-4 w-4 text-amber-300" />}
                     <input
@@ -305,20 +383,20 @@ export default function AuthPage() {
                         id="auth-name"
                         value={name}
                         onChange={(event) => setName(event.target.value)}
-                        placeholder="Autofilled from ID card"
+                        placeholder="Your full name"
                         className="w-full bg-transparent text-white outline-none"
                       />
                     </div>
                   </FormField>
 
-                  <FormField htmlFor="auth-student-id" label="Student ID number">
+                  <FormField htmlFor="auth-student-id" label="Student ID / ID number">
                     <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
                       <WalletCards className="h-4 w-4 text-amber-300" />
                       <input
                         id="auth-student-id"
                         value={studentIdNumber}
                         onChange={(event) => setStudentIdNumber(event.target.value)}
-                        placeholder="Autofilled from ID card"
+                        placeholder="ID number"
                         className="w-full bg-transparent text-white outline-none"
                       />
                     </div>
@@ -340,18 +418,82 @@ export default function AuthPage() {
               </>
             ) : null}
 
-            {shouldShowManualEmailHint ? (
-              <p className="text-sm text-amber-200">OCR could not detect your Sharda email. Enter it manually to continue.</p>
-            ) : null}
-
-            {shouldShowEmailError ? (
-              <p className="text-sm text-red-300">Use a Sharda University email such as `@sharda.ac.in` or `@ug.sharda.ac.in`.</p>
-            ) : null}
+            {shouldShowEmailError ? <p className="text-sm text-red-300">Enter a valid email address.</p> : null}
 
             <Button className="w-full" size="lg" type="submit" disabled={awaitingVerification || isSubmitDisabled}>
-              {submitting ? 'Processing...' : awaitingVerification ? 'Waiting for email verification...' : mode === 'register' ? 'Create account' : 'Login'}
+              {submitting ? 'Processing...' : awaitingVerification ? 'Waiting for verification...' : isRegisterMode ? 'Create account' : isAdminMode ? 'Login as admin' : 'Login'}
             </Button>
           </form>
+
+          {!isRegisterMode ? (
+            <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-white">Reset password</p>
+                <button
+                  type="button"
+                  onClick={() => setShowReset((current) => !current)}
+                  className="text-sm font-medium text-amber-200 transition hover:text-amber-100"
+                >
+                  {showReset ? 'Hide' : 'Open'}
+                </button>
+              </div>
+
+              {showReset ? (
+                <form className="space-y-4" onSubmit={handlePasswordReset}>
+                  <FormField htmlFor="reset-email" label="Email">
+                    <input
+                      id="reset-email"
+                      type="email"
+                      value={resetEmail}
+                      onChange={(event) => setResetEmail(event.target.value)}
+                      placeholder="name@example.com"
+                      className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-white outline-none"
+                    />
+                  </FormField>
+
+                  {!isSupabaseConfigured ? (
+                    <>
+                      <FormField htmlFor="reset-password" label="New password">
+                        <input
+                          id="reset-password"
+                          type="password"
+                          value={resetPasswordValue}
+                          onChange={(event) => setResetPasswordValue(event.target.value)}
+                          placeholder="At least 8 characters"
+                          className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-white outline-none"
+                        />
+                      </FormField>
+
+                      <FormField htmlFor="reset-confirm" label="Confirm password">
+                        <input
+                          id="reset-confirm"
+                          type="password"
+                          value={resetConfirmValue}
+                          onChange={(event) => setResetConfirmValue(event.target.value)}
+                          placeholder="Repeat password"
+                          className="w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-white outline-none"
+                        />
+                      </FormField>
+                    </>
+                  ) : null}
+
+                  <Button type="submit" variant="secondary" disabled={submitting}>
+                    {isSupabaseConfigured ? 'Send reset email' : 'Update password'}
+                  </Button>
+                </form>
+              ) : (
+                <p className="text-sm text-slate-400">
+                  {isSupabaseConfigured ? 'Send yourself a reset email.' : 'Set a new password directly for the local demo account.'}
+                </p>
+              )}
+            </div>
+          ) : null}
+
+          {isAdminMode ? (
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4 text-sm text-amber-100">
+              After login, the admin is sent to the trust approval queue to approve or reject user verification requests.
+            </div>
+          ) : null}
         </Card>
       </div>
     </div>

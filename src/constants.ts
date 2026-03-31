@@ -93,6 +93,8 @@ export const TRUST_PILLARS = [
 export const STORAGE_KEYS = {
   appMode: 'srishly.app-mode',
   parcels: 'srishly.parcels',
+  authSession: 'srishly.auth-session',
+  authUsers: 'srishly.auth-users',
   verificationCases: 'srishly.verification-cases',
   assignmentNotifications: 'srishly.assignment-notifications',
   deliveryThreads: 'srishly.delivery-threads',

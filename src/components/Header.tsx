@@ -27,7 +27,7 @@ export default function Header() {
   }, [location.pathname]);
 
   const navItems = getNavItems(mode);
-  const dashboardLabel = mode === 'sender' ? 'Your parcels' : 'Dashboard';
+  const dashboardLabel = session?.user.isAdmin ? 'Admin panel' : mode === 'sender' ? 'Your parcels' : 'Dashboard';
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/85 backdrop-blur-xl">
@@ -90,9 +90,18 @@ export default function Header() {
               <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white">
                 {session.user.name}
               </span>
+              {session.user.isAdmin ? (
+                <Link
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                  to={ROUTES.verificationHub}
+                >
+                  <ShieldCheck className="h-4 w-4 text-amber-300" />
+                  Approvals
+                </Link>
+              ) : null}
               <Link
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-                to={ROUTES.dashboard}
+                to={session.user.isAdmin ? ROUTES.verificationHub : ROUTES.dashboard}
               >
                 <UserRound className="h-4 w-4 text-amber-300" />
                 {dashboardLabel}
@@ -172,9 +181,17 @@ export default function Header() {
             })}
             {session ? (
               <>
+                {session.user.isAdmin ? (
+                  <Link
+                    className="mt-2 inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                    to={ROUTES.verificationHub}
+                  >
+                    Approvals
+                  </Link>
+                ) : null}
                 <Link
                   className="mt-2 inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
-                  to={ROUTES.dashboard}
+                  to={session.user.isAdmin ? ROUTES.verificationHub : ROUTES.dashboard}
                 >
                   {dashboardLabel}
                 </Link>

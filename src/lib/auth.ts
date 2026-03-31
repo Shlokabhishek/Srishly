@@ -3,6 +3,10 @@ import { sanitizeText } from '@/lib/utils';
 
 const SHARDA_DOMAIN = 'sharda.ac.in';
 
+export function isValidEmail(email: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim().toLowerCase());
+}
+
 export function isShardaEmail(email: string) {
   const normalizedEmail = email.trim().toLowerCase();
   const [, domain = ''] = normalizedEmail.split('@');
@@ -29,8 +33,8 @@ export function normalizeStudentId(studentIdNumber: string) {
 export function validateRegistrationInput(input: AuthRegisterInput) {
   const errors: Partial<Record<keyof AuthRegisterInput, string>> = {};
 
-  if (!isShardaEmail(input.email)) {
-    errors.email = 'Use your official Sharda University email address.';
+  if (!isValidEmail(input.email)) {
+    errors.email = 'Enter a valid email address.';
   }
 
   if (input.password.length < 8) {
@@ -47,10 +51,6 @@ export function validateRegistrationInput(input: AuthRegisterInput) {
 
   if (normalizeStudentId(input.studentIdNumber).length < 5) {
     errors.studentIdNumber = 'Student ID looks incomplete.';
-  }
-
-  if (!input.idCardImageName) {
-    errors.idCardImageName = 'Upload a valid ID card image.';
   }
 
   return errors;
