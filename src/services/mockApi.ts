@@ -16,14 +16,6 @@ interface ApiErrorResponse {
   error?: string;
 }
 
-interface DashboardSnapshotResponse {
-  parcels?: Parcel[];
-  trips?: Trip[];
-  verificationCases?: VerificationCase[];
-  assignmentNotifications?: AssignmentNotification[];
-  deliveryThreads?: DeliveryThread[];
-}
-
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') || '/api';
 const LOCAL_FALLBACK_API_ENABLED = import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL;
 const SHARED_API_UNAVAILABLE_MESSAGE =
@@ -86,20 +78,6 @@ function toAppError(error: unknown) {
   }
 
   return new AppValidationError('Request failed.');
-}
-
-function ensureArray<T>(value: unknown): T[] {
-  return Array.isArray(value) ? (value as T[]) : [];
-}
-
-function normalizeDashboardSnapshot(snapshot: DashboardSnapshotResponse) {
-  return {
-    parcels: ensureArray<Parcel>(snapshot.parcels),
-    trips: ensureArray<Trip>(snapshot.trips),
-    verificationCases: ensureArray<VerificationCase>(snapshot.verificationCases),
-    assignmentNotifications: ensureArray<AssignmentNotification>(snapshot.assignmentNotifications),
-    deliveryThreads: ensureArray<DeliveryThread>(snapshot.deliveryThreads),
-  };
 }
 
 async function requestApi<T>(path: string, init?: RequestInit): Promise<T> {
@@ -576,7 +554,7 @@ export async function updateParcelStatus(id: string, status: Parcel['status']) {
           ? {
               ...parcel,
               status,
-              otpCode: status === 'picked' ? parcel.otpCode ?? createOtpCode() : parcel.otpCode,
+              otpCode: status === 'picked' ? createOtpCode() : parcel.otpCode,
               pickedAt: status === 'picked' ? nextTimestamp : parcel.pickedAt,
               inTransitAt: status === 'in_transit' ? nextTimestamp : parcel.inTransitAt,
             }
@@ -707,28 +685,19 @@ export async function getDashboardSnapshot(): Promise<{
   assignmentNotifications: AssignmentNotification[];
   deliveryThreads: DeliveryThread[];
 }> {
-  try {
-    const snapshot = await requestApi<DashboardSnapshotResponse>('/dashboard');
-    return normalizeDashboardSnapshot(snapshot);
-  } catch (error) {
-    if (shouldUseFallbackApi(error)) {
-      const [parcels, trips, verificationCases, assignmentNotifications, deliveryThreads] = await Promise.all([
-        getFallbackParcels(),
-        getTrips(),
-        getFallbackVerificationCases(),
-        getAssignmentNotifications(),
-        getDeliveryThreads(),
-      ]);
+  const [parcels, trips, verificationCases, assignmentNotifications, deliveryThreads] = await Promise.all([
+    getParcels(),
+    getTrips(),
+    getVerificationCases(),
+    getAssignmentNotifications(),
+    getDeliveryThreads(),
+  ]);
 
-      return {
-        parcels,
-        trips,
-        verificationCases,
-        assignmentNotifications,
-        deliveryThreads,
-      };
-    }
-
-    throw toAppError(error);
-  }
+  return {
+    parcels,
+    trips,
+    verificationCases,
+    assignmentNotifications,
+    deliveryThreads,
+  };
 }

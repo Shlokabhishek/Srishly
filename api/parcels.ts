@@ -159,6 +159,10 @@ export default function handler(request: ApiRequest, response: ApiResponse) {
   }
 
   if (body.action === 'acceptRequest') {
+    if (target.status !== 'requested') {
+      return response.status(400).json({ error: 'This parcel request is no longer open for acceptance.' });
+    }
+
     target.status = 'accepted';
     target.travelerName = body.travelerName ?? 'Traveler';
     target.travelerPhone = '9876500022';
@@ -169,11 +173,27 @@ export default function handler(request: ApiRequest, response: ApiResponse) {
   }
 
   if (body.action === 'updateStatus' && body.status) {
+    if (body.status === 'delivered') {
+      return response.status(400).json({ error: 'Use OTP verification to complete delivery.' });
+    }
+
+    if (body.status === 'picked' && target.status !== 'accepted') {
+      return response.status(400).json({ error: 'Pickup can start only after a traveler accepts the request.' });
+    }
+
+    if (body.status === 'in_transit' && target.status !== 'picked') {
+      return response.status(400).json({ error: 'Start transit only after pickup is confirmed.' });
+    }
+
+    if (body.status !== 'picked' && body.status !== 'in_transit') {
+      return response.status(400).json({ error: 'Unsupported parcel status transition.' });
+    }
+
     target.status = body.status;
 
     if (body.status === 'picked') {
       target.pickedAt = new Date().toISOString();
-      target.otpCode = target.otpCode ?? createOtp();
+      target.otpCode = createOtp();
     }
 
     if (body.status === 'in_transit') {

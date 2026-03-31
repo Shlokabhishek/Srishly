@@ -28,7 +28,6 @@ export const seedParcels: Parcel[] = [
     travelerVerificationStatus: 'student_verified',
     travelerRating: 4.8,
     orderStartedAt: '2026-03-22T09:30:00.000Z',
-    otpCode: '1934',
   },
   {
     id: 'parcel-002',
@@ -115,7 +114,6 @@ export const seedParcels: Parcel[] = [
     receiverPhone: '9833001122',
     receiverAddress: 'Andheri East station road, Mumbai',
     photoNames: ['books-carton.jpg'],
-    otpCode: '6815',
   },
 ];
 
