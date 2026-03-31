@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import RouteSearch from '@/components/RouteSearch';
 import Card from '@/components/ui/Card';
 import { HOME_STATS, ROUTES, TRUST_PILLARS } from '@/constants';
+import { useMode } from '@/context/ModeContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 
 const howItWorks = [
@@ -24,6 +25,7 @@ const howItWorks = [
 
 export default function Home() {
   const navigate = useNavigate();
+  const { mode } = useMode();
   useDocumentMeta(
     'Secure peer-to-peer logistics',
     'Find verified travelers, post parcel requests, and manage route-level delivery flows with Srishly.',
@@ -60,19 +62,39 @@ export default function Home() {
             />
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                to={ROUTES.sendParcel}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-6 py-4 text-base font-semibold text-slate-950 transition hover:bg-amber-400"
-              >
-                Send a parcel
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                to={ROUTES.findTrip}
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
-              >
-                Find parcels to carry
-              </Link>
+              {mode === 'sender' ? (
+                <>
+                  <Link
+                    to={ROUTES.sendParcel}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-6 py-4 text-base font-semibold text-slate-950 transition hover:bg-amber-400"
+                  >
+                    Send a parcel
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    to={ROUTES.dashboard}
+                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
+                  >
+                    View your parcels
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to={ROUTES.findTrip}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-6 py-4 text-base font-semibold text-slate-950 transition hover:bg-amber-400"
+                  >
+                    Find parcels to carry
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    to={ROUTES.dashboard}
+                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Open traveler dashboard
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
 

@@ -78,6 +78,7 @@ export default function Dashboard() {
 
   const activeOrders = parcels.filter((parcel) => parcel.status !== 'delivered');
   const deliveredOrders = parcels.filter((parcel) => parcel.status === 'delivered');
+  const travelerOrders = activeOrders.filter((parcel) => parcel.travelerName);
   const activeThread = threads.find((thread) => thread.id === selectedThreadId) ?? threads[0];
   const visibleNotifications = notifications.filter((notification) => (notification.audience ? notification.audience === mode : true));
   const averageReward = parcels.length
@@ -173,10 +174,10 @@ export default function Dashboard() {
               <Card className="space-y-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h2 className="text-2xl font-semibold text-white">{mode === 'sender' ? 'View your orders' : 'Traveler order console'}</h2>
+                    <h2 className="text-2xl font-semibold text-white">{mode === 'sender' ? 'Your parcels' : 'Traveler order console'}</h2>
                     <p className="text-sm text-slate-400">
                       {mode === 'sender'
-                        ? 'Track traveler details, receiver details, live status, and OTP visibility.'
+                        ? 'See live parcel status first, then review your previous delivered parcels below.'
                         : 'Advance accepted orders through pickup, transit, and OTP-secured delivery.'}
                     </p>
                   </div>
@@ -188,7 +189,7 @@ export default function Dashboard() {
                   </Link>
                 </div>
 
-                {activeOrders.length === 0 ? (
+                {(mode === 'sender' ? activeOrders : travelerOrders).length === 0 ? (
                   <EmptyState
                     icon={mode === 'sender' ? Package2 : Truck}
                     title="No active orders"
@@ -196,7 +197,7 @@ export default function Dashboard() {
                   />
                 ) : (
                   <div className="space-y-4">
-                    {activeOrders.map((parcel) => (
+                    {(mode === 'sender' ? activeOrders : travelerOrders).map((parcel) => (
                       <div key={parcel.id} className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5">
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                           <div className="space-y-3">
@@ -272,6 +273,50 @@ export default function Dashboard() {
                     ))}
                   </div>
                 )}
+
+                {mode === 'sender' ? (
+                  <div className="space-y-4 border-t border-white/10 pt-6">
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">Previous parcels</h3>
+                      <p className="text-sm text-slate-400">Delivered parcel history with completed routes and handoff records.</p>
+                    </div>
+
+                    {deliveredOrders.length === 0 ? (
+                      <EmptyState
+                        icon={CheckCircle2}
+                        title="No previous parcels yet"
+                        description="Delivered parcels will appear here once a trip is completed."
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        {deliveredOrders.map((parcel) => (
+                          <div key={parcel.id} className="rounded-[1.75rem] border border-white/10 bg-slate-950/40 p-5">
+                            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                              <div className="space-y-2">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  <h4 className="text-lg font-semibold text-white">{parcel.parcelCategory}</h4>
+                                  <StatusBadge tone="success">Delivered</StatusBadge>
+                                </div>
+                                <p className="text-sm text-slate-300">
+                                  {parcel.fromCity} to {parcel.toCity} on {formatDate(parcel.pickupDate)}
+                                </p>
+                                <p className="text-sm text-slate-400">
+                                  Receiver {parcel.receiverName} | Traveler {parcel.travelerName ?? 'Assigned traveler'}
+                                </p>
+                              </div>
+                              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
+                                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Completed</p>
+                                <p className="mt-2 text-sm font-medium text-white">
+                                  {parcel.deliveredAt ? formatDateTime(parcel.deliveredAt) : 'Delivered'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </Card>
             </div>
 

@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import ErrorBanner from '@/components/ui/ErrorBanner';
 import FormField from '@/components/ui/FormField';
 import { CATEGORIES, CITIES, DECLARED_VALUES, DIMENSIONS, INITIAL_PARCEL_DRAFT, ROUTES } from '@/constants';
+import { useMode } from '@/context/ModeContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { isStepValid, validateParcelDraft } from '@/lib/validation';
 import { createParcel } from '@/services/mockApi';
@@ -21,6 +22,7 @@ const stepLabels = [
 
 export default function SendParcel() {
   const navigate = useNavigate();
+  const { mode, setMode } = useMode();
   const [step, setStep] = React.useState(1);
   const [draft, setDraft] = React.useState<ParcelDraftInput>(INITIAL_PARCEL_DRAFT);
   const [errors, setErrors] = React.useState<FieldErrors<keyof ParcelDraftInput>>({});
@@ -60,6 +62,28 @@ export default function SendParcel() {
 
   function handlePreviousStep() {
     setStep((current) => Math.max(current - 1, 1));
+  }
+
+  if (mode !== 'sender') {
+    return (
+      <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto max-w-3xl">
+          <Card highlighted className="space-y-5">
+            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">User mode only</p>
+            <h1 className="text-3xl font-semibold text-white">Switch to User mode to send a parcel.</h1>
+            <p className="text-sm leading-7 text-slate-300">
+              Posting parcels belongs to the sender flow. Traveler mode is reserved for browsing and carrying requests.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button onClick={() => setMode('sender')}>Switch to User mode</Button>
+              <Button variant="secondary" onClick={() => navigate(ROUTES.dashboard)}>
+                Go to your parcels
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {

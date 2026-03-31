@@ -2,17 +2,19 @@ import { Compass, Home, Package2, UserRound } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { ROUTES } from '@/constants';
+import { useMode } from '@/context/ModeContext';
 import { cn } from '@/lib/utils';
-
-const items = [
-  { label: 'Home', path: ROUTES.home, icon: Home },
-  { label: 'Send', path: ROUTES.sendParcel, icon: Package2 },
-  { label: 'Explore', path: ROUTES.findTraveler, icon: Compass },
-  { label: 'Dashboard', path: ROUTES.dashboard, icon: UserRound },
-];
 
 export default function BottomNav() {
   const location = useLocation();
+  const { mode } = useMode();
+  const items = [
+    { label: 'Home', path: ROUTES.home, icon: Home },
+    ...(mode === 'sender' ? [{ label: 'Send', path: ROUTES.sendParcel, icon: Package2 }] : []),
+    ...(mode === 'traveler' ? [{ label: 'Carry', path: ROUTES.findTrip, icon: Package2 }] : []),
+    { label: 'Explore', path: ROUTES.findTraveler, icon: Compass },
+    { label: mode === 'sender' ? 'Parcels' : 'Dashboard', path: ROUTES.dashboard, icon: UserRound },
+  ];
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4 md:hidden">

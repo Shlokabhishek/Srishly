@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ArrowRight, Package2, Search, ShieldCheck, SlidersHorizontal, Star, Truck } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -11,6 +11,7 @@ import PageLoader from '@/components/ui/PageLoader';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { CITIES, ROUTES } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
+import { useMode } from '@/context/ModeContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { formatCurrency, formatDate, maskPhone } from '@/lib/format';
 import { getOrderTimeline, getParcelStatusLabel, getParcelStatusTone, getVerificationLabel, isViewerVerified } from '@/lib/orderFlow';
@@ -18,8 +19,10 @@ import { acceptParcelRequest, getParcels, updateParcelStatus } from '@/services/
 import type { Parcel } from '@/types';
 
 export default function FindTrip() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { session } = useAuth();
+  const { mode, setMode } = useMode();
   const [parcels, setParcels] = React.useState<Parcel[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState('');
@@ -68,6 +71,28 @@ export default function FindTrip() {
 
     return matchesFromCity && matchesToCity && matchesQuery && matchesWeight;
   });
+
+  if (mode !== 'traveler') {
+    return (
+      <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <div className="mx-auto max-w-3xl">
+          <Card highlighted className="space-y-5">
+            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Traveler mode only</p>
+            <h1 className="text-3xl font-semibold text-white">Switch to Traveler mode to find parcels to carry.</h1>
+            <p className="text-sm leading-7 text-slate-300">
+              Browsing parcel requests belongs to the traveler flow. User mode is reserved for posting and tracking your own parcels.
+            </p>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button onClick={() => setMode('traveler')}>Switch to Traveler mode</Button>
+              <Button variant="secondary" onClick={() => navigate(ROUTES.dashboard)}>
+                Open traveler dashboard
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   async function handleAccept(parcelId: string) {
     setAcceptMessage('');

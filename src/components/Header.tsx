@@ -7,12 +7,14 @@ import { useAuth } from '@/context/AuthContext';
 import { useMode } from '@/context/ModeContext';
 import { cn } from '@/lib/utils';
 
-const navItems = [
-  { label: 'Send a parcel', path: ROUTES.sendParcel },
-  { label: 'Find parcels', path: ROUTES.findTrip },
-  { label: 'Find travelers', path: ROUTES.findTraveler },
-  { label: 'Trust center', path: ROUTES.trustCenter },
-];
+function getNavItems(mode: 'sender' | 'traveler') {
+  return [
+    ...(mode === 'sender' ? [{ label: 'Send a parcel', path: ROUTES.sendParcel }] : []),
+    ...(mode === 'traveler' ? [{ label: 'Find parcels', path: ROUTES.findTrip }] : []),
+    { label: 'Find travelers', path: ROUTES.findTraveler },
+    { label: 'Trust center', path: ROUTES.trustCenter },
+  ];
+}
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = React.useState(false);
@@ -23,6 +25,9 @@ export default function Header() {
   React.useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  const navItems = getNavItems(mode);
+  const dashboardLabel = mode === 'sender' ? 'Your parcels' : 'Dashboard';
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/85 backdrop-blur-xl">
@@ -90,7 +95,7 @@ export default function Header() {
                 to={ROUTES.dashboard}
               >
                 <UserRound className="h-4 w-4 text-amber-300" />
-                Dashboard
+                {dashboardLabel}
               </Link>
               <button
                 type="button"
@@ -171,7 +176,7 @@ export default function Header() {
                   className="mt-2 inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
                   to={ROUTES.dashboard}
                 >
-                  Open dashboard
+                  {dashboardLabel}
                 </Link>
                 <button
                   type="button"
