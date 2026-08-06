@@ -242,9 +242,9 @@ export default function AuthPage() {
     <div className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <Card highlighted className="space-y-5">
-          <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Account access</p>
-          <h1 className="text-4xl font-semibold text-white">Register, reset your password, or sign in as admin.</h1>
-          <p className="text-sm text-slate-300">
+          <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Account access</p>
+          <h1 className="text-4xl font-semibold text-zinc-50">Register, reset your password, or sign in as admin.</h1>
+          <p className="text-sm leading-7 text-zinc-300">
             Create a user account with email, phone, and ID details. Uploading ID proof helps the admin approve trusted access faster.
           </p>
           <ul className="space-y-3 text-sm text-slate-300">
@@ -282,25 +282,25 @@ export default function AuthPage() {
         </Card>
 
         <Card className="space-y-6">
-          <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
+          <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-950/50 p-1">
             <button
               type="button"
               onClick={() => switchMode('register')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'register' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
+              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'register' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300'}`}
             >
               Register
             </button>
             <button
               type="button"
               onClick={() => switchMode('login')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'login' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
+              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'login' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300'}`}
             >
               Login
             </button>
             <button
               type="button"
               onClick={() => switchMode('admin')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'admin' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
+              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'admin' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300'}`}
             >
               Admin
             </button>

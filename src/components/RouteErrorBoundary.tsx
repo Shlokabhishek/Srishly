@@ -24,19 +24,19 @@ export default class RouteErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center justify-center px-4 py-24">
-          <div className="w-full rounded-[2rem] border border-amber-400/20 bg-slate-900/80 p-10 text-center shadow-2xl shadow-black/40">
-            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/10 text-amber-300">
+          <div className="w-full rounded-[1.5rem] border border-zinc-800 bg-zinc-900/80 p-10 text-center shadow-2xl shadow-black/40">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-white/5 text-sky-300">
               <AlertTriangle className="h-8 w-8" />
             </div>
-            <h1 className="mb-3 text-3xl font-semibold text-white">Something went wrong</h1>
-            <p className="mx-auto mb-8 max-w-xl text-sm leading-7 text-slate-300">
+            <h1 className="mb-3 text-3xl font-semibold text-zinc-50">Something went wrong</h1>
+            <p className="mx-auto mb-8 max-w-xl text-sm leading-7 text-zinc-300">
               The page hit an unexpected error. Refresh to retry. If the problem continues, review the latest route changes
               before deploying.
             </p>
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 rounded-full bg-amber-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"
+              className="inline-flex items-center gap-2 rounded-full bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-white"
             >
               <RefreshCw className="h-4 w-4" />
               Reload app

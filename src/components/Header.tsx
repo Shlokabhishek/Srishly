@@ -30,15 +30,15 @@ export default function Header() {
   const dashboardLabel = session?.user.isAdmin ? 'Admin panel' : mode === 'sender' ? 'Your parcels' : 'Dashboard';
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl">
       <div className="mx-auto flex h-20 w-full max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link className="flex items-center gap-3" to={ROUTES.home}>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/20">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 text-sky-300">
             <ShieldCheck className="h-5 w-5" />
           </div>
           <div>
-            <p className="text-lg font-semibold tracking-tight text-white">{APP_NAME}</p>
-            <p className="text-xs uppercase tracking-[0.25em] text-slate-400">Trusted route logistics</p>
+            <p className="text-lg font-semibold tracking-tight text-zinc-50">{APP_NAME}</p>
+            <p className="text-xs uppercase tracking-[0.25em] text-zinc-400">Route logistics made clear</p>
           </div>
         </Link>
 
@@ -51,7 +51,7 @@ export default function Header() {
                 key={item.path}
                 className={cn(
                   'rounded-full px-4 py-2 text-sm font-medium transition',
-                  active ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white',
+                  active ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300 hover:bg-white/5 hover:text-zinc-50',
                 )}
                 to={item.path}
               >
@@ -62,13 +62,13 @@ export default function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
+          <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-1">
             <button
               type="button"
               onClick={() => setMode('sender')}
               className={cn(
                 'rounded-full px-4 py-2 text-sm font-medium transition',
-                mode === 'sender' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+                mode === 'sender' ? 'bg-zinc-100 text-zinc-950 shadow-sm' : 'text-zinc-300',
               )}
             >
               User mode
@@ -78,7 +78,7 @@ export default function Header() {
               onClick={() => setMode('traveler')}
               className={cn(
                 'rounded-full px-4 py-2 text-sm font-medium transition',
-                mode === 'traveler' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+                mode === 'traveler' ? 'bg-zinc-100 text-zinc-950 shadow-sm' : 'text-zinc-300',
               )}
             >
               Traveler mode
@@ -87,40 +87,40 @@ export default function Header() {
 
           {session ? (
             <>
-              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white">
+              <span className="rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-100">
                 {session.user.name}
               </span>
               {session.user.isAdmin ? (
                 <Link
-                  className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                  className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800"
                   to={ROUTES.verificationHub}
                 >
-                  <ShieldCheck className="h-4 w-4 text-amber-300" />
+                  <ShieldCheck className="h-4 w-4 text-sky-300" />
                   Approvals
                 </Link>
               ) : null}
               <Link
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800"
                 to={session.user.isAdmin ? ROUTES.verificationHub : ROUTES.dashboard}
               >
-                <UserRound className="h-4 w-4 text-amber-300" />
+                <UserRound className="h-4 w-4 text-sky-300" />
                 {dashboardLabel}
               </Link>
               <button
                 type="button"
                 onClick={() => void logout()}
-                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+                className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800"
               >
-                <LogOut className="h-4 w-4 text-amber-300" />
+                <LogOut className="h-4 w-4 text-sky-300" />
                 Logout
               </button>
             </>
           ) : (
             <Link
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+              className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm font-medium text-zinc-100 transition hover:bg-zinc-800"
               to={ROUTES.auth}
             >
-              <UserRound className="h-4 w-4 text-amber-300" />
+              <UserRound className="h-4 w-4 text-sky-300" />
               Sign in
             </Link>
           )}
@@ -128,7 +128,7 @@ export default function Header() {
 
         <button
           type="button"
-          className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 p-3 text-slate-200 transition hover:bg-white/10 md:hidden"
+          className="inline-flex items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 p-3 text-zinc-200 transition hover:bg-zinc-800 md:hidden"
           onClick={() => setMenuOpen((value) => !value)}
           aria-expanded={menuOpen}
           aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
@@ -138,15 +138,15 @@ export default function Header() {
       </div>
 
       {menuOpen ? (
-        <div className="border-t border-white/10 bg-slate-950/95 px-4 py-4 md:hidden">
+        <div className="border-t border-zinc-800 bg-zinc-950/95 px-4 py-4 md:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-2">
-            <div className="mb-2 inline-flex rounded-2xl border border-white/10 bg-white/5 p-1">
+            <div className="mb-2 inline-flex rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
               <button
                 type="button"
                 onClick={() => setMode('sender')}
                 className={cn(
                   'flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition',
-                  mode === 'sender' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+                  mode === 'sender' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300',
                 )}
               >
                 User mode
@@ -156,7 +156,7 @@ export default function Header() {
                 onClick={() => setMode('traveler')}
                 className={cn(
                   'flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition',
-                  mode === 'traveler' ? 'bg-amber-500 text-slate-950' : 'text-slate-300',
+                  mode === 'traveler' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300',
                 )}
               >
                 Traveler mode
@@ -171,7 +171,7 @@ export default function Header() {
                   key={item.path}
                   className={cn(
                     'rounded-2xl px-4 py-3 text-sm font-medium transition',
-                    active ? 'bg-white/10 text-white' : 'text-slate-300 hover:bg-white/5 hover:text-white',
+                    active ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300 hover:bg-white/5 hover:text-zinc-50',
                   )}
                   to={item.path}
                 >
@@ -183,14 +183,14 @@ export default function Header() {
               <>
                 {session.user.isAdmin ? (
                   <Link
-                    className="mt-2 inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                    className="mt-2 inline-flex items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:bg-zinc-800"
                     to={ROUTES.verificationHub}
                   >
                     Approvals
                   </Link>
                 ) : null}
                 <Link
-                  className="mt-2 inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
+                  className="mt-2 inline-flex items-center justify-center rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-950"
                   to={session.user.isAdmin ? ROUTES.verificationHub : ROUTES.dashboard}
                 >
                   {dashboardLabel}
@@ -198,14 +198,14 @@ export default function Header() {
                 <button
                   type="button"
                   onClick={() => void logout()}
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-100 transition hover:bg-zinc-800"
                 >
                   Logout
                 </button>
               </>
             ) : (
               <Link
-                className="mt-2 inline-flex items-center justify-center rounded-2xl bg-amber-500 px-4 py-3 text-sm font-semibold text-slate-950"
+                className="mt-2 inline-flex items-center justify-center rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-semibold text-zinc-950"
                 to={ROUTES.auth}
               >
                 Sign in

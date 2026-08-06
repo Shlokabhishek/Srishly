@@ -100,9 +100,9 @@ export default function FindTraveler() {
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="space-y-4">
-          <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Trust-gated traveler search</p>
-          <h1 className="text-4xl font-semibold text-white">See route availability first, then unlock verified traveler details.</h1>
-          <p className="max-w-3xl text-sm leading-7 text-slate-300">
+          <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Trust-gated traveler search</p>
+          <h1 className="text-4xl font-semibold text-zinc-50">See route availability first, then unlock verified traveler details.</h1>
+          <p className="max-w-3xl text-sm leading-7 text-zinc-300">
             Route counts stay public, but names, contact details, and booking actions unlock only after login and verification.
           </p>
         </div>

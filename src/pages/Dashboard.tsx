@@ -124,12 +124,12 @@ export default function Dashboard() {
   return (
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-7xl space-y-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div className="flex flex-col gap-6 border-b border-zinc-800 pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
-            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Operations dashboard</p>
-            <h1 className="text-4xl font-semibold text-white">Track orders and finish delivery with OTP.</h1>
-            <p className="max-w-3xl text-sm text-slate-300">Live status, contacts, and chat in one place.</p>
-            <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Operations dashboard</p>
+            <h1 className="text-4xl font-semibold text-zinc-50">Track orders and finish delivery with OTP.</h1>
+            <p className="max-w-3xl text-sm leading-7 text-zinc-300">Live status, contacts, and chat in one place.</p>
+            <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-400">
               {session ? <span>{session.user.name}</span> : null}
               <StatusBadge tone={viewerVerified ? 'success' : 'warning'}>
                 {viewerVerified ? 'Verified access' : 'Verification pending'}
@@ -137,18 +137,18 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="inline-flex rounded-full border border-white/10 bg-white/5 p-1">
+          <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900/70 p-1">
             <button
               type="button"
               onClick={() => setMode('sender')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'sender' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
+              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'sender' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300'}`}
             >
               Sender
             </button>
             <button
               type="button"
               onClick={() => setMode('traveler')}
-              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'traveler' ? 'bg-amber-500 text-slate-950' : 'text-slate-300'}`}
+              className={`rounded-full px-5 py-2 text-sm font-semibold transition ${mode === 'traveler' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300'}`}
             >
               Traveler
             </button>
@@ -184,12 +184,12 @@ export default function Dashboard() {
               <Card className="space-y-5">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                   <div>
-                    <h2 className="text-2xl font-semibold text-white">{mode === 'sender' ? 'Your parcels' : 'Accepted orders'}</h2>
-                    <p className="text-sm text-slate-400">{mode === 'sender' ? 'Live orders first. Delivered orders below.' : 'Pickup, track, deliver, or cancel here.'}</p>
+                    <h2 className="text-2xl font-semibold text-zinc-50">{mode === 'sender' ? 'Your parcels' : 'Accepted orders'}</h2>
+                    <p className="text-sm leading-7 text-zinc-400">{mode === 'sender' ? 'Live orders first. Delivered orders below.' : 'Pickup, track, deliver, or cancel here.'}</p>
                   </div>
                   <Link
                     to={mode === 'sender' ? ROUTES.sendParcel : ROUTES.findTrip}
-                    className="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-amber-400"
+                    className="inline-flex items-center justify-center rounded-2xl bg-zinc-100 px-5 py-3 text-sm font-semibold text-zinc-950 transition hover:bg-white"
                   >
                     {mode === 'sender' ? 'Send parcel' : 'Browse requests'}
                   </Link>

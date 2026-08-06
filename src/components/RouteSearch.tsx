@@ -45,15 +45,15 @@ export default function RouteSearch({
 
   return (
     <form className="w-full" onSubmit={handleSubmit}>
-      <div className="grid gap-4 rounded-[2rem] border border-white/10 bg-slate-900/80 p-4 shadow-2xl shadow-black/30 backdrop-blur lg:grid-cols-[1fr_1fr_auto]">
+      <div className="grid gap-4 rounded-[1.5rem] border border-zinc-800 bg-zinc-900/75 p-4 shadow-xl shadow-black/20 backdrop-blur lg:grid-cols-[1fr_1fr_auto]">
         <FormField error={errors.fromCity} htmlFor="route-search-from" label="From city">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <MapPin className="h-4 w-4 text-amber-300" />
+          <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3">
+            <MapPin className="h-4 w-4 text-sky-300" />
             <select
               id="route-search-from"
               value={fromCity}
               onChange={(event) => setFromCity(event.target.value)}
-              className="w-full bg-transparent text-sm text-white outline-none"
+              className="w-full bg-transparent text-sm text-zinc-100 outline-none"
             >
               <option value="">Select origin</option>
               {CITIES.map((city) => (
@@ -66,13 +66,13 @@ export default function RouteSearch({
         </FormField>
 
         <FormField error={errors.toCity} htmlFor="route-search-to" label="To city">
-          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-            <MapPin className="h-4 w-4 text-amber-300" />
+          <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/60 px-4 py-3">
+            <MapPin className="h-4 w-4 text-sky-300" />
             <select
               id="route-search-to"
               value={toCity}
               onChange={(event) => setToCity(event.target.value)}
-              className="w-full bg-transparent text-sm text-white outline-none"
+              className="w-full bg-transparent text-sm text-zinc-100 outline-none"
             >
               <option value="">Select destination</option>
               {CITIES.map((city) => (
@@ -91,7 +91,7 @@ export default function RouteSearch({
           </Button>
         </div>
       </div>
-      <p className="mt-3 text-sm text-slate-400">{helperText}</p>
+      <p className="mt-3 text-sm text-zinc-400">{helperText}</p>
     </form>
   );
 }

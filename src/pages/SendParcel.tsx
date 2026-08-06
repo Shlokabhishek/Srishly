@@ -70,9 +70,9 @@ export default function SendParcel() {
       <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
         <div className="mx-auto max-w-3xl">
           <Card highlighted className="space-y-5">
-            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">User mode only</p>
-            <h1 className="text-3xl font-semibold text-white">Send parcels in User mode.</h1>
-            <p className="text-sm text-slate-300">Traveler mode is only for carrying orders.</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">User mode only</p>
+            <h1 className="text-3xl font-semibold text-zinc-50">Send parcels in User mode.</h1>
+            <p className="text-sm leading-7 text-zinc-300">Traveler mode is only for carrying orders.</p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button onClick={() => setMode('sender')}>Switch to User mode</Button>
               <Button variant="secondary" onClick={() => navigate(ROUTES.dashboard)}>
@@ -147,9 +147,9 @@ export default function SendParcel() {
         ) : null}
 
         <div className="space-y-4">
-          <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Sender workflow</p>
-          <h1 className="text-4xl font-semibold text-white">Send a parcel.</h1>
-          <p className="max-w-3xl text-sm text-slate-300">Add parcel details, route, receiver, and reward.</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Sender workflow</p>
+          <h1 className="text-4xl font-semibold text-zinc-50">Send a parcel.</h1>
+          <p className="max-w-3xl text-sm leading-7 text-zinc-300">Add parcel details, route, receiver, and reward.</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">

@@ -145,9 +145,9 @@ export default function FindTrip() {
       <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
         <div className="mx-auto max-w-3xl">
           <Card highlighted className="space-y-5">
-            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Traveler mode only</p>
-            <h1 className="text-3xl font-semibold text-white">Find parcels in Traveler mode.</h1>
-            <p className="text-sm text-slate-300">User mode is for sending and tracking your parcel.</p>
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Traveler mode only</p>
+            <h1 className="text-3xl font-semibold text-zinc-50">Find parcels in Traveler mode.</h1>
+            <p className="text-sm leading-7 text-zinc-300">User mode is for sending and tracking your parcel.</p>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button variant="secondary" onClick={() => navigate(ROUTES.sendParcel)}>
                 Open send parcel
@@ -164,9 +164,9 @@ export default function FindTrip() {
     <div className="px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="space-y-4">
-          <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Traveler marketplace</p>
-          <h1 className="text-4xl font-semibold text-white">Find a parcel to carry.</h1>
-          <p className="max-w-3xl text-sm text-slate-300">Accept a route match, unlock contacts, and move the order forward.</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Traveler marketplace</p>
+          <h1 className="text-4xl font-semibold text-zinc-50">Find a parcel to carry.</h1>
+          <p className="max-w-3xl text-sm leading-7 text-zinc-300">Accept a route match, unlock contacts, and move the order forward.</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[0.34fr_0.66fr]">

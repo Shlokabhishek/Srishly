@@ -11,8 +11,8 @@ export default function Card({ children, className, highlighted = false, ...prop
   return (
     <div
       className={cn(
-        'rounded-[2rem] border border-white/10 bg-slate-900/80 p-6 shadow-2xl shadow-black/30 backdrop-blur',
-        highlighted && 'border-amber-400/30 shadow-amber-950/20',
+        'rounded-[1.5rem] border border-zinc-800 bg-zinc-900/75 p-6 shadow-lg shadow-black/20 backdrop-blur',
+        highlighted && 'border-zinc-700 bg-zinc-900 shadow-xl shadow-black/25',
         className,
       )}
       {...props}

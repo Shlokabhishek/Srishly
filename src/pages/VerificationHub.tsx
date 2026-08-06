@@ -99,9 +99,9 @@ export default function VerificationHub() {
     <div className="px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-8">
         <div className="space-y-4">
-          <p className="text-sm uppercase tracking-[0.25em] text-amber-200">Verification operations</p>
-          <h1 className="text-4xl font-semibold text-white">Approve trusted users.</h1>
-          <p className="max-w-3xl text-sm text-slate-300">Review trust requests, approve good users, and reject incomplete submissions.</p>
+          <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Verification operations</p>
+          <h1 className="text-4xl font-semibold text-zinc-50">Approve trusted users.</h1>
+          <p className="max-w-3xl text-sm leading-7 text-zinc-300">Review trust requests, approve good users, and reject incomplete submissions.</p>
         </div>
 
         <div className="grid gap-5 md:grid-cols-3">
@@ -115,16 +115,16 @@ export default function VerificationHub() {
             <Card className="space-y-4">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-semibold text-white">Review queue</h2>
-                  <p className="text-sm text-slate-400">{filteredCases.length} visible cases</p>
+                  <h2 className="text-2xl font-semibold text-zinc-50">Review queue</h2>
+                  <p className="text-sm text-zinc-400">{filteredCases.length} visible cases</p>
                 </div>
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3">
-                  <Search className="h-4 w-4 text-amber-300" />
+                <div className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950/50 px-4 py-3">
+                  <Search className="h-4 w-4 text-sky-300" />
                   <input
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search queue"
-                    className="bg-transparent text-sm text-white outline-none"
+                    className="bg-transparent text-sm text-zinc-100 outline-none"
                   />
                 </div>
               </div>
@@ -153,23 +153,23 @@ export default function VerificationHub() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.04 }}
                   >
-                    <Card className="space-y-4 bg-white/5">
+                    <Card className="space-y-4 bg-zinc-950/50">
                       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-xl font-semibold text-white">{item.travelerName}</h3>
+                            <h3 className="text-xl font-semibold text-zinc-50">{item.travelerName}</h3>
                             <StatusBadge tone={item.status === 'pending' ? 'warning' : item.status === 'approved' ? 'success' : 'danger'}>
                               {item.status}
                             </StatusBadge>
                           </div>
-                          <p className="text-sm text-slate-300">{item.route}</p>
-                          {item.email ? <p className="text-sm text-slate-400">{item.email}</p> : null}
-                          <p className="text-sm text-slate-400">
+                          <p className="text-sm text-zinc-300">{item.route}</p>
+                          {item.email ? <p className="text-sm text-zinc-400">{item.email}</p> : null}
+                          <p className="text-sm text-zinc-400">
                             {item.idType} submitted from {item.city}
                           </p>
                         </div>
 
-                        <div className="text-sm text-slate-400">{formatDateTime(item.submittedAt)}</div>
+                        <div className="text-sm text-zinc-400">{formatDateTime(item.submittedAt)}</div>
                       </div>
 
                       <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
@@ -197,8 +197,8 @@ export default function VerificationHub() {
 
           <div className="space-y-5">
             <Card highlighted>
-              <h2 className="text-xl font-semibold text-white">Review checklist</h2>
-              <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-300">
+              <h2 className="text-xl font-semibold text-zinc-50">Review checklist</h2>
+              <ul className="mt-4 space-y-3 text-sm leading-7 text-zinc-300">
                 <li>Confirm route identity and city metadata are coherent.</li>
                 <li>Reject incomplete or mismatched document submissions.</li>
                 <li>Only approve records ready to appear in the public traveler feed.</li>
@@ -207,12 +207,12 @@ export default function VerificationHub() {
 
             <Card>
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-white">Audit log</h2>
+                <h2 className="text-xl font-semibold text-zinc-50">Audit log</h2>
                 <StatusBadge tone="muted">Latest first</StatusBadge>
               </div>
               <div className="mt-4 space-y-3">
                 {auditLog.slice(0, 8).map((entry) => (
-                  <div key={entry} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+                  <div key={entry} className="rounded-2xl border border-zinc-800 bg-zinc-950/50 px-4 py-3 text-sm text-zinc-300">
                     {entry}
                   </div>
                 ))}
@@ -239,9 +239,9 @@ function MetricCard({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-sm uppercase tracking-[0.2em] text-slate-500">{label}</p>
-          <p className="mt-3 text-3xl font-semibold text-white">{value}</p>
+          <p className="mt-3 text-3xl font-semibold text-zinc-50">{value}</p>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-200">
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-950/60 text-sky-300">
           <Icon className="h-5 w-5" />
         </div>
       </div>

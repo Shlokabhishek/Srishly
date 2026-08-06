@@ -9,8 +9,8 @@ interface StatusBadgeProps {
 
 const toneClasses = {
   success: 'border-emerald-400/20 bg-emerald-500/10 text-emerald-200',
-  warning: 'border-amber-400/20 bg-amber-500/10 text-amber-200',
-  muted: 'border-white/10 bg-white/5 text-slate-300',
+  warning: 'border-sky-400/20 bg-sky-500/10 text-sky-200',
+  muted: 'border-zinc-800 bg-zinc-900 text-zinc-300',
   danger: 'border-red-400/20 bg-red-500/10 text-red-200',
 };
 

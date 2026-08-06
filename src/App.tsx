@@ -67,11 +67,11 @@ export default function App() {
           <ScrollToTop />
           <a
             href="#main-content"
-            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:text-slate-900"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-zinc-100 focus:px-4 focus:py-2 focus:text-zinc-950"
           >
             Skip to content
           </a>
-          <div className="flex min-h-screen flex-col bg-slate-950 text-slate-50">
+          <div className="flex min-h-screen flex-col bg-zinc-950 text-zinc-50">
             <Header />
             <main id="main-content" className="flex-1">
               <React.Suspense fallback={<PageLoader label="Loading experience" fullScreen />}>

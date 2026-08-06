@@ -41,17 +41,17 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="space-y-6"
           >
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-500/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-amber-100">
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-zinc-200">
               <ShieldCheck className="h-4 w-4" />
-              Production-ready route logistics
+              Simple route logistics
             </div>
             <div className="space-y-4">
-              <h1 className="max-w-3xl text-5xl font-semibold tracking-tight text-white sm:text-6xl">
-                Ship with trusted travelers and keep the handoff transparent.
+              <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-zinc-50 sm:text-6xl">
+                Ship with trusted travelers and keep every step easy to read.
               </h1>
-              <p className="max-w-2xl text-lg leading-8 text-slate-300">
-                Srishly helps senders and travelers coordinate city-to-city parcel delivery with validation, escrow-first
-                workflows, assignment notifications, gated traveler discovery, and responsive dashboards built for production deployment.
+              <p className="max-w-2xl text-lg leading-8 text-zinc-300">
+                Srishly helps senders and travelers coordinate parcel delivery with clear route search, verification, and
+                straightforward dashboard flows.
               </p>
             </div>
 
@@ -66,14 +66,14 @@ export default function Home() {
                 <>
                   <Link
                     to={ROUTES.sendParcel}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-6 py-4 text-base font-semibold text-slate-950 transition hover:bg-amber-400"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-6 py-4 text-base font-semibold text-zinc-950 transition hover:bg-white"
                   >
                     Send a parcel
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
                     to={ROUTES.dashboard}
-                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
+                    className="inline-flex items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-4 text-base font-semibold text-zinc-100 transition hover:bg-zinc-800"
                   >
                     View your parcels
                   </Link>
@@ -82,14 +82,14 @@ export default function Home() {
                 <>
                   <Link
                     to={ROUTES.findTrip}
-                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-6 py-4 text-base font-semibold text-slate-950 transition hover:bg-amber-400"
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-6 py-4 text-base font-semibold text-zinc-950 transition hover:bg-white"
                   >
                     Find parcels to carry
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                   <Link
                     to={ROUTES.dashboard}
-                    className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-base font-semibold text-white transition hover:bg-white/10"
+                    className="inline-flex items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-900 px-6 py-4 text-base font-semibold text-zinc-100 transition hover:bg-zinc-800"
                   >
                     Open traveler dashboard
                   </Link>
@@ -106,9 +106,9 @@ export default function Home() {
           >
             {HOME_STATS.map((stat) => (
               <Card key={stat.label} highlighted>
-                <p className="text-sm uppercase tracking-[0.25em] text-slate-400">{stat.label}</p>
-                <div className="mt-2 text-4xl font-semibold text-white">{stat.value}</div>
-                <p className="mt-3 text-sm leading-7 text-slate-300">{stat.description}</p>
+                <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">{stat.label}</p>
+                <div className="mt-2 text-4xl font-semibold text-zinc-50">{stat.value}</div>
+                <p className="mt-3 text-sm leading-7 text-zinc-300">{stat.description}</p>
               </Card>
             ))}
           </motion.div>
@@ -118,17 +118,17 @@ export default function Home() {
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-10 max-w-2xl">
-            <p className="text-sm uppercase tracking-[0.25em] text-amber-200">How it works</p>
-            <h2 className="mt-3 text-3xl font-semibold text-white">A safer workflow from posting to delivery</h2>
+            <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">How it works</p>
+            <h2 className="mt-3 text-3xl font-semibold text-zinc-50">A simple workflow from posting to delivery</h2>
           </div>
           <div className="grid gap-6 lg:grid-cols-3">
             {howItWorks.map((item, index) => (
               <Card key={item.title}>
-                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/5 text-sm font-semibold text-amber-200">
+                <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-800 bg-zinc-950/60 text-sm font-semibold text-zinc-200">
                   0{index + 1}
                 </div>
-                <h3 className="text-xl font-semibold text-white">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-300">{item.description}</p>
+                <h3 className="text-xl font-semibold text-zinc-50">{item.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-zinc-300">{item.description}</p>
               </Card>
             ))}
           </div>
@@ -138,16 +138,15 @@ export default function Home() {
       <section className="px-4 py-16 sm:px-6 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.9fr_1.1fr]">
           <Card className="space-y-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs uppercase tracking-[0.25em] text-slate-300">
-              <Sparkles className="h-4 w-4 text-amber-300" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-xs uppercase tracking-[0.25em] text-zinc-300">
+              <Sparkles className="h-4 w-4 text-sky-300" />
               Trust stack
             </div>
-            <h2 className="text-3xl font-semibold text-white">Designed to remove uncertainty from route-based delivery.</h2>
-            <p className="text-sm leading-7 text-slate-300">
-              The biggest product risk in peer-to-peer logistics is not matching, it is trust. Every major view in this app
-              now reinforces identity checks, validation, and safe delivery confirmation.
+            <h2 className="text-3xl font-semibold text-zinc-50">Designed to reduce uncertainty.</h2>
+            <p className="text-sm leading-7 text-zinc-300">
+              The app keeps trust signals visible without crowding the screen, so users can understand what happens next.
             </p>
-            <Link className="inline-flex items-center gap-2 text-sm font-semibold text-amber-200" to={ROUTES.trustCenter}>
+            <Link className="inline-flex items-center gap-2 text-sm font-semibold text-sky-300" to={ROUTES.trustCenter}>
               Visit trust center
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -156,8 +155,8 @@ export default function Home() {
           <div className="grid gap-6 sm:grid-cols-3">
             {TRUST_PILLARS.map((pillar) => (
               <Card key={pillar.title}>
-                <h3 className="text-lg font-semibold text-white">{pillar.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-slate-300">{pillar.description}</p>
+                <h3 className="text-lg font-semibold text-zinc-50">{pillar.title}</h3>
+                <p className="mt-3 text-sm leading-7 text-zinc-300">{pillar.description}</p>
               </Card>
             ))}
           </div>
@@ -166,17 +165,17 @@ export default function Home() {
 
       <section className="px-4 pb-20 pt-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          <Card className="flex flex-col gap-6 bg-[linear-gradient(135deg,rgba(245,158,11,0.12),rgba(255,255,255,0.03))] p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+          <Card className="flex flex-col gap-6 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),rgba(15,23,42,0.08))] p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
             <div className="space-y-3">
-              <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-slate-950/40 px-4 py-2 text-xs uppercase tracking-[0.25em] text-amber-100">
+              <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-xs uppercase tracking-[0.25em] text-zinc-200">
                 <Truck className="h-4 w-4" />
-                Ready for production deployment
+                Ready for a clean launch
               </div>
-              <h2 className="text-3xl font-semibold text-white">Launch with validated flows, lazy routes, and secure Netlify routing.</h2>
+              <h2 className="text-3xl font-semibold text-zinc-50">Launch with a layout that is clear, calm, and responsive.</h2>
             </div>
             <Link
               to={ROUTES.dashboard}
-              className="inline-flex items-center justify-center rounded-2xl bg-amber-500 px-6 py-4 text-base font-semibold text-slate-950 transition hover:bg-amber-400"
+              className="inline-flex items-center justify-center rounded-2xl bg-zinc-100 px-6 py-4 text-base font-semibold text-zinc-950 transition hover:bg-white"
             >
               Open dashboard
             </Link>
