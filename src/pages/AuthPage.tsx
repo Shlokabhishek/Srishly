@@ -11,7 +11,6 @@ import { ROUTES } from '@/constants';
 import { useAuth } from '@/context/AuthContext';
 import { useDocumentMeta } from '@/hooks/useDocumentMeta';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_PASSWORD } from '@/lib/localAuth';
 import { isValidEmail, normalizeName, normalizePhone, normalizeStudentId, parseIdCardText, validateRegistrationInput } from '@/lib/auth';
 import type { ParsedIdCard } from '@/types';
 
@@ -45,7 +44,7 @@ export default function AuthPage() {
 
   useDocumentMeta(
     'Account access',
-    'Register, sign in, reset your password, or use the admin approval login for trust reviews.',
+    'Register, sign in, reset your password, or access the admin approval flow.',
   );
 
   React.useEffect(() => {
@@ -225,9 +224,9 @@ export default function AuthPage() {
     setMode(nextMode);
 
     if (nextMode === 'admin') {
-      setEmail(LOCAL_ADMIN_EMAIL);
+      setEmail('');
       setPassword('');
-      setEmailTouched(true);
+      setEmailTouched(false);
       return;
     }
 
@@ -243,27 +242,33 @@ export default function AuthPage() {
       <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
         <Card highlighted className="space-y-5">
           <p className="text-sm uppercase tracking-[0.25em] text-zinc-400">Account access</p>
-          <h1 className="text-4xl font-semibold text-zinc-50">Register, reset your password, or sign in as admin.</h1>
+          <h1 className="text-4xl font-semibold text-zinc-50">Access your account without the extra noise.</h1>
           <p className="text-sm leading-7 text-zinc-300">
-            Create a user account with email, phone, and ID details. Uploading ID proof helps the admin approve trusted access faster.
+            Create an account, sign back in, or request a password reset from one place. ID proof is optional, but it helps speed up trust approval.
           </p>
-          <ul className="space-y-3 text-sm text-slate-300">
-            <li>Register works even without external auth setup.</li>
-            <li>Password reset is available from the login screen.</li>
-            <li>Admin login can open the trust approval queue.</li>
-          </ul>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-sm font-semibold text-white">Register</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Create a trusted account with your basic details and optional ID proof.</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-sm font-semibold text-white">Reset</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Recover access directly from the login screen whenever you need it.</p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <p className="text-sm font-semibold text-white">Admin</p>
+              <p className="mt-2 text-sm leading-6 text-slate-300">Authorized admins can review verification requests after signing in.</p>
+            </div>
+          </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <div className="flex items-center justify-between gap-3">
-              <p className="text-sm font-semibold text-white">Auth mode</p>
+              <p className="text-sm font-semibold text-white">Authentication status</p>
               <StatusBadge tone={isSupabaseConfigured ? 'success' : 'warning'}>
                 {isSupabaseConfigured ? 'Supabase live' : 'Local demo auth'}
               </StatusBadge>
             </div>
-            <p className="mt-3 text-sm text-slate-300">
-              Admin login email: <span className="font-medium text-white">{LOCAL_ADMIN_EMAIL}</span>
-            </p>
-            <p className="mt-2 text-sm text-slate-400">
-              Default admin password: <span className="font-medium text-white">{LOCAL_ADMIN_PASSWORD}</span>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Demo and live auth are both supported here, but administrator credentials are intentionally hidden from the public interface.
             </p>
           </div>
           {ocrResult ? (
@@ -330,7 +335,7 @@ export default function AuthPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   onBlur={() => setEmailTouched(true)}
-                  placeholder={isAdminMode ? LOCAL_ADMIN_EMAIL : 'name@example.com'}
+                  placeholder={isAdminMode ? 'Enter your admin email' : 'name@example.com'}
                   className="w-full bg-transparent text-white outline-none"
                   autoComplete={mode === 'register' ? 'email' : 'username'}
                 />

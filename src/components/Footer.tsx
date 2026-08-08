@@ -24,6 +24,9 @@ export default function Footer() {
         <div>
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.2em] text-zinc-300">Product</h3>
           <div className="space-y-3 text-sm text-zinc-400">
+            <a className="block transition hover:text-white" href="/#about">
+              About
+            </a>
             <Link className="block transition hover:text-white" to={ROUTES.sendParcel}>
               Send a parcel
             </Link>
