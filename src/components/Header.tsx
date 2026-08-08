@@ -28,6 +28,20 @@ export default function Header() {
 
   const navItems = getNavItems(mode);
   const dashboardLabel = session?.user.isAdmin ? 'Admin panel' : mode === 'sender' ? 'Your parcels' : 'Dashboard';
+  const modeButtonClass = (isActive: boolean) =>
+    cn(
+      'rounded-full px-4 py-2 text-sm font-semibold transition duration-200',
+      isActive
+        ? 'bg-sky-300 text-slate-950 shadow-[0_10px_30px_rgba(125,211,252,0.22)]'
+        : 'bg-transparent text-zinc-400 hover:bg-white/6 hover:text-zinc-100',
+    );
+  const mobileModeButtonClass = (isActive: boolean) =>
+    cn(
+      'flex-1 rounded-2xl px-4 py-3 text-sm font-semibold transition duration-200',
+      isActive
+        ? 'bg-sky-300 text-slate-950 shadow-[0_10px_30px_rgba(125,211,252,0.22)]'
+        : 'bg-transparent text-zinc-400 hover:bg-white/6 hover:text-zinc-100',
+    );
 
   return (
     <header className="sticky top-0 z-50 border-b border-zinc-800/80 bg-zinc-950/90 backdrop-blur-xl">
@@ -62,24 +76,18 @@ export default function Header() {
         </nav>
 
         <div className="hidden items-center gap-3 md:flex">
-          <div className="inline-flex rounded-full border border-zinc-800 bg-zinc-900 p-1">
+          <div className="inline-flex rounded-full border border-sky-400/15 bg-zinc-950/80 p-1 shadow-inner shadow-black/20">
             <button
               type="button"
               onClick={() => setMode('sender')}
-              className={cn(
-                'rounded-full px-4 py-2 text-sm font-medium transition',
-                mode === 'sender' ? 'bg-zinc-100 text-zinc-950 shadow-sm' : 'text-zinc-300',
-              )}
+              className={modeButtonClass(mode === 'sender')}
             >
               User mode
             </button>
             <button
               type="button"
               onClick={() => setMode('traveler')}
-              className={cn(
-                'rounded-full px-4 py-2 text-sm font-medium transition',
-                mode === 'traveler' ? 'bg-zinc-100 text-zinc-950 shadow-sm' : 'text-zinc-300',
-              )}
+              className={modeButtonClass(mode === 'traveler')}
             >
               Traveler mode
             </button>
@@ -140,24 +148,18 @@ export default function Header() {
       {menuOpen ? (
         <div className="border-t border-zinc-800 bg-zinc-950/95 px-4 py-4 md:hidden">
           <nav className="mx-auto flex max-w-7xl flex-col gap-2">
-            <div className="mb-2 inline-flex rounded-2xl border border-zinc-800 bg-zinc-900 p-1">
+            <div className="mb-2 inline-flex rounded-2xl border border-sky-400/15 bg-zinc-950/80 p-1 shadow-inner shadow-black/20">
               <button
                 type="button"
                 onClick={() => setMode('sender')}
-                className={cn(
-                  'flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition',
-                  mode === 'sender' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300',
-                )}
+                className={mobileModeButtonClass(mode === 'sender')}
               >
                 User mode
               </button>
               <button
                 type="button"
                 onClick={() => setMode('traveler')}
-                className={cn(
-                  'flex-1 rounded-2xl px-4 py-3 text-sm font-medium transition',
-                  mode === 'traveler' ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-300',
-                )}
+                className={mobileModeButtonClass(mode === 'traveler')}
               >
                 Traveler mode
               </button>
