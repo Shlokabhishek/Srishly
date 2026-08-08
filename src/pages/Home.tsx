@@ -23,21 +23,6 @@ const howItWorks = [
   },
 ];
 
-const aboutHighlights = [
-  {
-    title: 'Built for real routes',
-    description: 'Srishly is designed for campus and city-to-city delivery where travelers are already going the same way.',
-  },
-  {
-    title: 'Trust stays visible',
-    description: 'Verification, approval, and handoff signals stay clear without overwhelming the screen with extra detail.',
-  },
-  {
-    title: 'Cleaner decision flow',
-    description: 'Senders can search, compare, and move forward faster with a calmer layout and fewer competing messages.',
-  },
-];
-
 export default function Home() {
   const navigate = useNavigate();
   const { mode } = useMode();
@@ -129,30 +114,27 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="about" className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <Card className="space-y-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-xs uppercase tracking-[0.25em] text-zinc-300">
-              <ShieldCheck className="h-4 w-4 text-sky-300" />
-              About Srishly
+      <section className="px-4 py-16 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <Card className="flex flex-col gap-6 bg-[linear-gradient(135deg,rgba(125,211,252,0.08),rgba(15,23,42,0.18))] p-8 sm:p-10 lg:flex-row lg:items-center lg:justify-between">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-4 py-2 text-xs uppercase tracking-[0.25em] text-zinc-200">
+                <ShieldCheck className="h-4 w-4 text-sky-300" />
+                About Srishly
+              </div>
+              <h2 className="text-3xl font-semibold text-zinc-50">Learn how the platform is designed for clean, trusted delivery flows.</h2>
+              <p className="max-w-3xl text-sm leading-7 text-zinc-300">
+                Explore the product vision, trust-led design approach, and route-based workflow in the dedicated About page.
+              </p>
             </div>
-            <h2 className="text-3xl font-semibold text-zinc-50">A simpler way to coordinate trusted parcel delivery.</h2>
-            <p className="text-sm leading-7 text-zinc-300">
-              Srishly connects senders with verified travelers, keeps route matching easy to understand, and reduces friction in the handoff journey.
-            </p>
-            <p className="text-sm leading-7 text-zinc-400">
-              The experience is built to feel structured and lightweight, so people can focus on who is carrying what, where it is going, and what happens next.
-            </p>
+            <Link
+              to={ROUTES.about}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-100 px-6 py-4 text-base font-semibold text-zinc-950 transition hover:bg-white"
+            >
+              Open About
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </Card>
-
-          <div className="grid gap-6 sm:grid-cols-3">
-            {aboutHighlights.map((item) => (
-              <Card key={item.title}>
-                <h3 className="text-lg font-semibold text-zinc-50">{item.title}</h3>
-                <p className="mt-3 text-sm leading-7 text-zinc-300">{item.description}</p>
-              </Card>
-            ))}
-          </div>
         </div>
       </section>
 

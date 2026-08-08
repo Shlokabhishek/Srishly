@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 
 function getNavItems(mode: 'sender' | 'traveler') {
   return [
+    { label: 'About', path: ROUTES.about },
     ...(mode === 'sender' ? [{ label: 'Send a parcel', path: ROUTES.sendParcel }] : []),
     ...(mode === 'traveler' ? [{ label: 'Find parcels', path: ROUTES.findTrip }] : []),
     { label: 'Find travelers', path: ROUTES.findTraveler },

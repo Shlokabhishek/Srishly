@@ -13,6 +13,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { ModeProvider } from '@/context/ModeContext';
 
 const Home = React.lazy(() => import('@/pages/Home'));
+const AboutPage = React.lazy(() => import('@/pages/AboutPage'));
 const AuthPage = React.lazy(() => import('@/pages/AuthPage'));
 const SendParcel = React.lazy(() => import('@/pages/SendParcel'));
 const FindTrip = React.lazy(() => import('@/pages/FindTrip'));
@@ -30,6 +31,7 @@ function AppRoutes() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/" element={<Home />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/send" element={<SendParcel />} />
           <Route path="/find" element={<FindTrip />} />
